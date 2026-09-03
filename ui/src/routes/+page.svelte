@@ -1,6 +1,7 @@
 <script>
     import "$lib/palette.css";
-    import BackgroundLines from "$lib/BackgroundLines.svelte";
+    import BackgroundLines from "./BackgroundLines.svelte";
+    import MainLandingContent from "./MainLandingContent.svelte";
 </script>
 
 <BackgroundLines />
@@ -8,13 +9,16 @@
 <!-- Title -->
 <div class="title">
     <h3 class="title-subtext">Hack Club</h3>
-    <h1 class="title-text">DUOS</h1>
+    <h1 class="title-text">DYAD</h1>
+    <h1 class="explainer-text">
+        Build a project with a friend, get a game to play together!
+    </h1>
 </div>
 
 <!-- Orpheus -->
 <a href="https://hackclub.com/"
     ><img
-        style="position: absolute; top: 0; right: 2.5vw; border: 0; width: 25vw; z-index: 999;"
+        style="position: absolute; top: 0; right: 2.5vw; border: 0; width: 15vw; z-index: 999;"
         src="https://assets.hackclub.com/flag-orpheus-top.svg"
         alt="Hack Club"
     /></a
@@ -24,15 +28,20 @@
 <a href="/login" class="dashboard-btn">Open Dashboard</a>
 
 <!-- Little nub -->
+<div class="little-nub"></div>
+
+<!-- Main content -->
+<MainLandingContent></MainLandingContent>
 
 <style>
     :root {
         overflow-x: hidden;
+        overscroll-behavior: none;
     }
 
     .title {
         height: 65vh;
-        width: calc(70vw + 4px);
+        width: calc(80vw + 4px);
         padding-top: 5vh;
         text-align: center;
         display: flex;
@@ -69,30 +78,58 @@
             0 -1px var(--border);
     }
 
+    .explainer-text {
+        color: var(--text-dark);
+        margin-left: 8px;
+        margin-right: 8px;
+    }
+
     .dashboard-btn {
         color: var(--bg-secondary);
         text-decoration: none;
         background-color: var(--accent-primary);
-        width: calc(30vw + 5vh - 3px);
-        height: 10vh;
-        font-size: 6vh;
+        width: calc(min(400px, 60vw) - 3px);
+        height: calc(10vh - 1px);
+        font-size: 4cqmin;
         line-height: 10vh;
         display: block;
         text-align: center;
-        border-top-right-radius: 3vh;
+        border-top-right-radius: calc(4vh - 6px);
         border-bottom-right-radius: 5vh;
         position: absolute;
         margin-top: 4px;
-        z-index: -6;
         border-color: transparent;
         border-style: solid;
         border-width: 0 2px 2px 0;
-        transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        transition:
+            background-color 0.2s,
+            color 0.2s,
+            border-color 0.2s;
     }
 
     .dashboard-btn:hover {
         background-color: var(--accent-secondary);
         color: var(--accent-primary);
         border-color: var(--bg-secondary);
+    }
+
+    .little-nub {
+        background-color: var(--bg-tertiary);
+        width: 10vh;
+        height: 5vh;
+        left: calc(min(400px, 60vw) - 5vh);
+        margin-top: calc(5vh + 4px);
+        z-index: -7;
+        position: absolute;
+        -webkit-mask-image: radial-gradient(
+            circle 5vh at top right,
+            transparent 98%,
+            black 100%
+        );
+        mask-image: radial-gradient(
+            circle 5vh at top right,
+            transparent 98%,
+            black 100%
+        );
     }
 </style>
