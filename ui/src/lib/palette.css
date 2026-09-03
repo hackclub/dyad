@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,200..800;1,200..800&display=swap');
+
+:root {
+    font-family: "Karla", sans-serif;
+
+    --text-primary: #222233;
+    --text-secondary: #444455;
+
+    --bg-primary: #ced5e0;
+    --bg-secondary: #312a1f;
+    --bg-tertiary: #a4573c;
+
+    --accent-primary: #ff5100;
+    --accent-secondary: #ffa782;
+
+    --border: #263964;
+}
+
+body {
+    margin: 0;
+    background-color: var(--bg-primary);
+}
