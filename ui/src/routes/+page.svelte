@@ -33,6 +33,23 @@
 <!-- Main content -->
 <MainLandingContent></MainLandingContent>
 
+<footer class="site-footer">
+    <a
+        href="https://hackclub.com/privacy-and-terms"
+        style="color: #993100;">Hack Club privacy & Terms</a
+    >
+    <p style="margin-left: 3vw; margin-right: 3vw">
+        Made by <a
+            href="https://hackclub.enterprise.slack.com/team/U08LEHUPSCR"
+            style="color: #993100;">Brendan</a
+        > @ Hack Club HQ. By teens, for teens.
+    </p>
+    <a
+        href="https://forms.hackclub.com/bounty"
+        style="color: #993100;">Fulfillment Bounty</a
+    >
+</footer>
+
 <style>
     :root {
         overflow-x: hidden;
@@ -116,7 +133,7 @@
     .little-nub {
         background-color: var(--bg-tertiary);
         width: 10vh;
-        height: 5vh;
+        height: calc(5vh + 1px);
         left: calc(min(400px, 60vw) - 5vh);
         margin-top: calc(5vh + 4px);
         z-index: -7;
@@ -131,5 +148,14 @@
             transparent 98%,
             black 100%
         );
+    }
+
+    .site-footer {
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--bg-primary);
+        color: var(--text-dark);
     }
 </style>
