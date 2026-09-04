@@ -27,13 +27,15 @@
         color: var(--text-primary);
     }
     .container {
-        background-color: var(--bg-secondary);
-        border: 4px solid var(--border-color);
+        box-sizing: border-box;
+        background-color: var(--bg-tertiary);
+        border: 4px solid var(--border);
         border-radius: 16px;
         padding: 8px;
         width: fit-content;
     }
     .top-bar {
+        width: 100%;
         display: flex;
         justify-content: space-between;
         align-items: stretch;
@@ -52,6 +54,6 @@
         width: 100%;
         min-height: 60vh;
         margin-top: 5vh;
-        
+
     }
 </style>
