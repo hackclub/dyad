@@ -56,8 +56,36 @@
         </p>
     </div>
     <div class="description-entry">
+        <p class="description-title">
+            Can I have more than two people or go solo?
+        </p>
+        <p class="description-text">
+            Nope, any given project submitted to Dyad must be made by exactly
+            two people. However, you can submit as many projects as you would
+            like, and you can switch up who you're working with between
+            projects.
+        </p>
+    </div>
+    <div class="description-entry">
+        <p class="description-title">What if one member gets in trouble?</p>
+        <p class="description-text">
+            If one member winds up banned from Hackatime or Slack, the other
+            member of the team unfortunately cannot receive a standard prize. We
+            only pursue bans in extraordinary circumstances, such as deliberate
+            attempts to mislead the review process. The other team member may
+            discretionarily get some sort of solo prize, evaluated on a
+            case-by-case basis.
+        </p>
+    </div>
+    <div class="description-entry">
         <p class="description-title">I have more questions!</p>
-        <p class="description-text">Ask in the Slack Channel <a href="https://hackclub.enterprise.slack.com/archives/C0BUXJ7T15F" class="desc-link">#dyad</a> or shoot <a href="mailto:brendan@hackclub.com" class="desc-link">me</a> an email.
+        <p class="description-text">
+            Ask in the Slack Channel <a
+                href="https://hackclub.enterprise.slack.com/archives/C0BUXJ7T15F"
+                class="desc-link">#dyad</a
+            >
+            or shoot
+            <a href="mailto:brendan@hackclub.com" class="desc-link">me</a> an email.
         </p>
     </div>
 </div>

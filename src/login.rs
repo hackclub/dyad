@@ -14,7 +14,7 @@ pub async fn login_handler(req: HttpRequest) -> actix_web::HttpResponse {
     hc_helper::auth::login::handle_login(
         &req,
         Scopes {
-            openid: false,
+            openid: true,
             profile: true,
             email: true,
             name: true,
@@ -60,6 +60,7 @@ pub async fn hackatime_login_handler(req: HttpRequest) -> actix_web::HttpRespons
             admin: false,
         },
         redirect_url,
+        false
     )
     .await
 }
@@ -80,4 +81,10 @@ pub async fn hackatime_callback_handler(
         "/dashboard".to_string(),
     )
     .await
+}
+
+#[actix_web::get("/api/hackatime-linked")]
+pub async fn hackatime_linked_handler(req: HttpRequest) -> actix_web::HttpResponse {
+    actix_web::HttpResponse::Ok()
+        .json(req.cookie(hackatime::login::TOKEN_COOKIE).is_some())
 }

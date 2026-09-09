@@ -65,6 +65,7 @@
               pnpm
               yarn
               svelte-language-server
+              sqlx-cli
               self.formatter.${system}
             ];
 
