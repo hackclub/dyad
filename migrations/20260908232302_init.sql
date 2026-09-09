@@ -8,7 +8,8 @@ CREATE TABLE hacker (
   first_time bool,
   join_at timestamp,
   last_login_at timestamp,
-  slack_id text
+  slack_id text,
+  friend_code int
 );
 
 CREATE TABLE project (
@@ -23,9 +24,8 @@ CREATE TABLE project (
 );
 
 CREATE TABLE user_project (
-  id SERIAL PRIMARY KEY,
+  project_id SERIAL PRIMARY KEY,
   user_id int,
-  project_id int,
   hours_needed real,
   hours_logged real,
   confirmed_at timestamp,

@@ -1,22 +1,26 @@
 <script lang="ts">
   import "$lib/palette.css";
   import ProjectEntry from "./ProjectEntry.svelte";
+  import ProjectDialog from "./ProjectDialog.svelte";
   import { onMount } from "svelte";
 
   let linked = $state(true);
+  let dialog_open = $state(false);
   onMount(async () => {
     const res = await fetch("/api/hackatime-linked");
     linked = await res.json();
   });
 
   function new_project() {
-    alert("New project");
+    dialog_open = true;
   }
 
   function link_hackatime() {
     window.location.href = "/hackatime-login";
   }
 </script>
+
+<ProjectDialog bind:open={dialog_open} />
 
 <div class="top-bar">
   <div class="container">
@@ -27,25 +31,19 @@
   >
 </div>
 
-{#if !linked}
-  <button class="link-hackatime-button" onclick={link_hackatime}
-    >Link Hackatime to continue</button
-  >
-{/if}
-
-{#if linked}
-  <div class="container project-container">
-    <ProjectEntry project_name="Project 1" friend_name="John" />
-    <ProjectEntry project_name="Project 1" friend_name="John" />
-    <ProjectEntry project_name="Project 1" friend_name="John" />
-    <ProjectEntry project_name="Project 1" friend_name="John" />
-    <ProjectEntry project_name="Project 1" friend_name="John" />
-    <ProjectEntry project_name="Project 1" friend_name="John" />
-    <ProjectEntry project_name="Project 1" friend_name="John" />
-    <ProjectEntry project_name="Project 1" friend_name="John" />
-    <ProjectEntry project_name="Project 1" friend_name="John" />
-  </div>
-{/if}
+<div class="container project-container">
+  {#if linked}
+    {#each Array.from({ length: 9 }) as _}
+      <ProjectEntry project_name="Project 1" friend_name="John" />
+    {/each}
+  {:else}
+    <div class="link-hackatime-button-container">
+      <button class="link-hackatime-button" onclick={link_hackatime}
+        >Link Hackatime to continue</button
+      >
+    </div>
+  {/if}
+</div>
 
 <style>
   :root {
@@ -92,14 +90,15 @@
     background-color: var(--accent-primary);
     margin-top: 10vh;
     font-size: 36px;
-    border-style: solid;
-    border-width: 4px;
-    border-color: var(--border);
+    border: 4px solid var(--border);
     border-radius: 6px;
-    margin-left: auto;
-    margin-right: auto;
   }
   .link-hackatime-button:hover {
     background-color: var(--accent-secondary);
+  }
+  .link-hackatime-button-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 </style>
