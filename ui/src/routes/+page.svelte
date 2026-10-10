@@ -4,6 +4,10 @@
     import MainLandingContent from "./MainLandingContent.svelte";
 </script>
 
+<svelte:head>
+    <title>Dyad</title>
+</svelte:head>
+
 <BackgroundLines />
 
 <!-- Title -->
@@ -34,9 +38,8 @@
 <MainLandingContent></MainLandingContent>
 
 <footer class="site-footer">
-    <a
-        href="https://hackclub.com/privacy-and-terms"
-        style="color: #993100;">Hack Club privacy & Terms</a
+    <a href="https://hackclub.com/privacy-and-terms" style="color: #993100;"
+        >Hack Club Privacy & Terms</a
     >
     <p style="margin-left: 3vw; margin-right: 3vw">
         Made by <a
@@ -44,9 +47,8 @@
             style="color: #993100;">Brendan</a
         > @ Hack Club HQ. By teens, for teens.
     </p>
-    <a
-        href="https://forms.hackclub.com/bounty"
-        style="color: #993100;">Fulfillment Bounty</a
+    <a href="https://forms.hackclub.com/bounty" style="color: #993100;"
+        >Fulfillment Bounty</a
     >
 </footer>
 
@@ -105,7 +107,7 @@
         color: var(--bg-secondary);
         text-decoration: none;
         background-color: var(--accent-primary);
-        width: calc(min(400px, 60vw) - 3px);
+        width: calc(min(400px, 60vw) - 4px);
         height: calc(10vh - 1px);
         font-size: 4cqmin;
         line-height: 10vh;

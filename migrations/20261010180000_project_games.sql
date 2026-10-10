@@ -1,0 +1,2 @@
+ALTER TABLE project DROP COLUMN game;
+ALTER TABLE project ADD COLUMN games text[] NOT NULL DEFAULT '{}';

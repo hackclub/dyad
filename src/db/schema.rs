@@ -8,11 +8,11 @@ pub struct DBHacker {
     pub hca_token: Option<String>,
     pub hackatime_token: Option<String>,
     pub user_id: Option<i32>,
-    pub first_time: Option<bool>,
     pub join_at: Option<NaiveDateTime>,
     pub last_login_at: Option<NaiveDateTime>,
     pub slack_id: Option<String>,
-    pub friend_code: Option<i32>
+    pub friend_code: Option<i32>,
+    pub reminders_opt_out: Option<bool>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -21,21 +21,32 @@ pub struct DBProject {
     pub name: Option<String>,
     pub description: Option<String>,
     pub screenshot_url: Option<String>,
+    pub code_url: Option<String>,
+    pub playable_url: Option<String>,
+    pub games: Option<Vec<String>>,
     pub user1: Option<i32>,
     pub user2: Option<i32>,
+    pub created_at: Option<NaiveDateTime>,
     pub shipped_at: Option<NaiveDateTime>,
     pub approved_at: Option<NaiveDateTime>,
+    pub review_status: Option<String>,
 }
 
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)]
 pub struct DBUserProject {
     pub user_id: Option<i32>,
     pub project_id: Option<i32>,
+    pub first_time: Option<bool>,
     pub hours_needed: Option<f32>,
     pub hours_logged: Option<f32>,
     pub confirmed_at: Option<NaiveDateTime>,
     pub ship_ok_at: Option<NaiveDateTime>,
     pub hackatime_project_names: Option<Vec<String>>,
+    pub airtable_record_id: Option<String>,
+    pub last_seen_hours: Option<f32>,
+    pub last_active_at: Option<NaiveDateTime>,
+    pub nudged_at: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -46,11 +57,11 @@ pub struct HackerParsed {
     pub hca_token: String,
     pub hackatime_token: String,
     pub user_id: i32,
-    pub first_time: bool,
     pub join_at: Option<NaiveDateTime>,
     pub last_login_at: Option<NaiveDateTime>,
     pub slack_id: String,
-    pub friend_code: i32 
+    pub friend_code: i32,
+    pub reminders_opt_out: bool,
 }
 
 impl Into<HackerParsed> for DBHacker {
@@ -62,11 +73,11 @@ impl Into<HackerParsed> for DBHacker {
             hca_token: self.hca_token.unwrap_or_default(),
             hackatime_token: self.hackatime_token.unwrap_or_default(),
             user_id: self.user_id.unwrap_or_default(),
-            first_time: self.first_time.unwrap_or_default(),
             join_at: self.join_at,
             last_login_at: self.last_login_at,
             slack_id: self.slack_id.unwrap_or_default(),
-            friend_code: self.friend_code.unwrap_or_default()
+            friend_code: self.friend_code.unwrap_or_default(),
+            reminders_opt_out: self.reminders_opt_out.unwrap_or_default(),
         }
     }
 }
@@ -77,10 +88,15 @@ pub struct ProjectParsed {
     pub name: String,
     pub description: String,
     pub screenshot_url: String,
+    pub code_url: String,
+    pub playable_url: String,
+    pub games: Vec<String>,
     pub user1: i32,
-    pub user2: i32,
+    pub user2: Option<i32>,
+    pub created_at: Option<NaiveDateTime>,
     pub shipped_at: Option<NaiveDateTime>,
     pub approved_at: Option<NaiveDateTime>,
+    pub review_status: Option<String>,
 }
 
 impl Into<ProjectParsed> for DBProject {
@@ -90,10 +106,15 @@ impl Into<ProjectParsed> for DBProject {
             name: self.name.unwrap_or_default(),
             description: self.description.unwrap_or_default(),
             screenshot_url: self.screenshot_url.unwrap_or_default(),
+            code_url: self.code_url.unwrap_or_default(),
+            playable_url: self.playable_url.unwrap_or_default(),
+            games: self.games.unwrap_or_default(),
             user1: self.user1.unwrap_or_default(),
-            user2: self.user2.unwrap_or_default(),
+            user2: self.user2,
+            created_at: self.created_at,
             shipped_at: self.shipped_at,
             approved_at: self.approved_at,
+            review_status: self.review_status,
         }
     }
 }
@@ -102,11 +123,13 @@ impl Into<ProjectParsed> for DBProject {
 pub struct UserProjectParsed {
     pub user_id: i32,
     pub project_id: i32,
+    pub first_time: bool,
     pub hours_needed: f32,
     pub hours_logged: f32,
     pub confirmed_at: Option<NaiveDateTime>,
     pub ship_ok_at: Option<NaiveDateTime>,
-    pub hackatime_project_names: Option<Vec<String>>,
+    pub hackatime_project_names: Vec<String>,
+    pub airtable_record_id: Option<String>,
 }
 
 impl Into<UserProjectParsed> for DBUserProject {
@@ -114,11 +137,76 @@ impl Into<UserProjectParsed> for DBUserProject {
         UserProjectParsed {
             user_id: self.user_id.unwrap_or_default(),
             project_id: self.project_id.unwrap_or_default(),
+            first_time: self.first_time.unwrap_or_default(),
             hours_needed: self.hours_needed.unwrap_or_default(),
             hours_logged: self.hours_logged.unwrap_or_default(),
             confirmed_at: self.confirmed_at,
             ship_ok_at: self.ship_ok_at,
-            hackatime_project_names: self.hackatime_project_names,
+            hackatime_project_names: self.hackatime_project_names.unwrap_or_default(),
+            airtable_record_id: self.airtable_record_id,
         }
     }
+}
+
+#[derive(serde::Serialize)]
+pub struct HackatimeTrackedProjectInfo {
+    pub name: String,
+    pub hours: f32,
+}
+
+#[derive(serde::Serialize)]
+pub struct ClientMe {
+    pub first_name: String,
+    pub friend_code: i32,
+    pub hackatime_linked: bool,
+    pub ysws_eligible: bool,
+    pub verification_status: String,
+    pub reminders: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ClientMemberInfo {
+    pub name: String,
+    pub hours_logged: f32,
+    pub hours_needed: f32,
+    pub first_time: bool,
+    pub confirmed: bool,
+    pub ready_to_ship: bool,
+    pub hackatime_linked: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct ClientProjectInfo {
+    pub project_id: i32,
+    pub name: String,
+    pub description: String,
+    pub screenshot_url: String,
+    pub code_url: String,
+    pub playable_url: String,
+    pub games: Vec<String>,
+    pub shipped: bool,
+    pub review_status: Option<String>,
+    pub hackatime_project_names: Vec<String>,
+    pub me: ClientMemberInfo,
+    pub friend: Option<ClientMemberInfo>,
+}
+
+#[derive(serde::Serialize)]
+pub struct ClientInvite {
+    pub name: String,
+    pub project_name: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct ClientGame {
+    pub name: &'static str,
+    pub credits: u8,
+    pub copies_label: String,
+    pub image_url: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct ClientCatalog {
+    pub credit_budget: u8,
+    pub games: Vec<ClientGame>,
 }

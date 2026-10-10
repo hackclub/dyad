@@ -1,0 +1,157 @@
+{
+  "credit_budget": 2,
+  "credit_tiers": [
+    { "under_cents": 2500, "credits": 1 },
+    { "under_cents": null, "credits": 2 }
+  ],
+  "games": [
+    {
+      "name": "Portal 2",
+      "steam_app_id": 620,
+      "price_cents": 999,
+      "copies": 2
+    },
+    {
+      "name": "Stardew Valley",
+      "steam_app_id": 413150,
+      "price_cents": 1499,
+      "copies": 2
+    },
+    {
+      "name": "We Were Here Together",
+      "steam_app_id": 865360,
+      "price_cents": 1299,
+      "copies": 2
+    },
+    {
+      "name": "Keep Talking and Nobody Explodes",
+      "steam_app_id": 341800,
+      "price_cents": 1499,
+      "copies": 2
+    },
+    {
+      "name": "Biped",
+      "steam_app_id": 1071870,
+      "price_cents": 1499,
+      "copies": 2
+    },
+    {
+      "name": "Heave Ho",
+      "steam_app_id": 905340,
+      "price_cents": 999,
+      "copies": 2
+    },
+    {
+      "name": "Lovers in a Dangerous Spacetime",
+      "steam_app_id": 252110,
+      "price_cents": 1499,
+      "copies": 2
+    },
+    {
+      "name": "Terraria",
+      "steam_app_id": 105600,
+      "price_cents": 999,
+      "copies": 2
+    },
+    {
+      "name": "Chained Together",
+      "steam_app_id": 2567870,
+      "price_cents": 499,
+      "copies": 2
+    },
+    {
+      "name": "Stick Fight: The Game",
+      "steam_app_id": 674940,
+      "price_cents": 499,
+      "copies": 2
+    },
+    {
+      "name": "Lethal Company",
+      "steam_app_id": 1966720,
+      "price_cents": 999,
+      "copies": 2
+    },
+    {
+      "name": "PEAK",
+      "steam_app_id": 3527290,
+      "price_cents": 799,
+      "copies": 2,
+      "image_url": "https://shared.steamstatic.com/store_item_assets/steam/apps/3527290/31bac6b2eccf09b368f5e95ce510bae2baf3cfcd/header.jpg"
+    },
+    {
+      "name": "WEBFISHING",
+      "steam_app_id": 3146520,
+      "price_cents": 499,
+      "copies": 2
+    },
+    {
+      "name": "Don't Starve Together",
+      "steam_app_id": 322330,
+      "price_cents": 1499,
+      "copies": 2
+    },
+    {
+      "name": "Overcooked! 2",
+      "steam_app_id": 728880,
+      "price_cents": 2499,
+      "copies": 2
+    },
+    {
+      "name": "Unravel Two",
+      "steam_app_id": 1225570,
+      "price_cents": 1999,
+      "copies": 2
+    },
+    {
+      "name": "Human: Fall Flat",
+      "steam_app_id": 477160,
+      "price_cents": 1999,
+      "copies": 2
+    },
+    {
+      "name": "Cuphead",
+      "steam_app_id": 268910,
+      "price_cents": 1999,
+      "copies": 2
+    },
+    {
+      "name": "It Takes Two",
+      "steam_app_id": 1426210,
+      "price_cents": 3999,
+      "copies": 1,
+      "friend_pass": true
+    },
+    {
+      "name": "Split Fiction",
+      "steam_app_id": 2001120,
+      "price_cents": 4999,
+      "copies": 1,
+      "friend_pass": true
+    },
+    {
+      "name": "A Way Out",
+      "steam_app_id": 1222700,
+      "price_cents": 2999,
+      "copies": 1,
+      "friend_pass": true
+    },
+    {
+      "name": "Trine 5",
+      "steam_app_id": 1436700,
+      "price_cents": 2999,
+      "copies": 2
+    },
+    {
+      "name": "Deep Rock Galactic",
+      "steam_app_id": 548430,
+      "price_cents": 2999,
+      "copies": 2
+    },
+    {
+      "name": "Valheim",
+      "steam_app_id": 892970,
+      "price_cents": 2999,
+      "copies": 2
+    }
+  ]
+}

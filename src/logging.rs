@@ -1,6 +1,9 @@
-use std::sync::{
-    Arc,
-    atomic::{AtomicU64, Ordering},
+use std::{
+    io::Write,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, AtomicUsize, Ordering},
+    },
 };
 
 use actix_web::{
@@ -9,12 +12,15 @@ use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
     middleware::Next,
 };
-use log::{Log, Metadata, Record};
-use pretty_env_logger::env_logger::Env;
+use chrono_tz::America::New_York;
+use log::{Level, Log, Metadata, Record};
+use pretty_env_logger::env_logger::{Env, fmt::Color};
+use sqlx::types::chrono::Utc;
 
 const MAX_PATH_LEN: usize = 128;
 
 static NEXT_REQ_ID: AtomicU64 = AtomicU64::new(1);
+static MAX_TARGET_WIDTH: AtomicUsize = AtomicUsize::new(0);
 
 tokio::task_local! {
     static CONN_CTX: Arc<String>;
@@ -54,6 +60,36 @@ impl Log for ContextLogger {
 
 pub fn init() {
     let logger = pretty_env_logger::formatted_timed_builder()
+        .format(|f, record| {
+            let time = Utc::now()
+                .with_timezone(&New_York)
+                .format("%Y-%m-%d %H:%M:%S%.3f %Z");
+
+            let mut level_style = f.style();
+            level_style.set_color(match record.level() {
+                Level::Trace => Color::Magenta,
+                Level::Debug => Color::Blue,
+                Level::Info => Color::Green,
+                Level::Warn => Color::Yellow,
+                Level::Error => Color::Red,
+            });
+
+            let target = record.target();
+            let width = MAX_TARGET_WIDTH
+                .fetch_max(target.len(), Ordering::Relaxed)
+                .max(target.len());
+            let mut target_style = f.style();
+            target_style.set_bold(true);
+
+            writeln!(
+                f,
+                " {} {} {} > {}",
+                time,
+                level_style.value(format!("{:<5}", record.level())),
+                target_style.value(format!("{target:<width$}")),
+                record.args()
+            )
+        })
         .parse_env(Env::default().default_filter_or("info,sqlx::query=warn"))
         .build();
     let max_level = logger.filter();

@@ -29,6 +29,20 @@
         </p>
     </div>
     <div class="description-entry">
+        <p class="description-title">Can I have started my project earlier?</p>
+        <p class="description-text">
+            Yep! Dyad will accept a project from a pair regardless of when that
+            project was created. The only rule is that the project cannot have
+            been previously approved by another Hack Club YSWS program.
+        </p>
+        <p class="description-text">
+            Though I guess one more thing: if another YSWS program rejected your
+            project because you tried to cheat the time tracking systems, please
+            don't submit here. You won't get any prizes and it's just more work
+            for the reviewers.
+        </p>
+    </div>
+    <div class="description-entry">
         <p class="description-title">What are the hour targets?</p>
         <p class="description-text">
             You have to each spend five (5) hours <span style:font-weight="bold"
@@ -37,22 +51,13 @@
             on the project, tracked with
             <a href="https://hackatime.hackclub.com/" class="desc-link"
                 >Hackatime</a
-            >. However, if it's the first time coding and/or participating in a
+            >
+            or
+            <a href="https://lapse.hackclub.com/" class="desc-link">Lapse</a>.
+            However, if it's the first time coding and/or participating in a
             Hack Club YSWS program for one of you, that person only has to do
             three (3) hours. Other person still has to do the full five, though.
-        </p>
-    </div>
-    <div class="description-entry">
-        <p class="description-title">What is the AI policy?</p>
-        <p class="description-text">
-            As long as the majority of the work is your own and you're honest
-            about it, you may use AI as you see fit. However, <span
-                style:font-weight="bold"
-                >any time spent AI coding (using terminal tools, typing out AI
-                output, etc.) will not be counted towards your hour target.</span
-            > The hour counter in the dashboard can't distinguish what is and isn't
-            AI time, so keep that in mind. You don't want your project to get rejected
-            in the review stage because you haven't met the hour target!
+            Make sure you sync Lapse with Hackatime if you're going to use it!
         </p>
     </div>
     <div class="description-entry">
