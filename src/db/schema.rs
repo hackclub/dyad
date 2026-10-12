@@ -1,11 +1,12 @@
 use sqlx::types::chrono::NaiveDateTime;
 
+use crate::{crypto, hackatime::HackatimeStatus};
+
 #[derive(sqlx::FromRow)]
 pub struct DBHacker {
     pub hca_id: Option<String>,
     pub email: Option<String>,
     pub first_name: Option<String>,
-    pub hca_token: Option<String>,
     pub hackatime_token: Option<String>,
     pub user_id: Option<i32>,
     pub join_at: Option<NaiveDateTime>,
@@ -13,6 +14,8 @@ pub struct DBHacker {
     pub slack_id: Option<String>,
     pub friend_code: Option<i32>,
     pub reminders_opt_out: Option<bool>,
+    pub invite_token: Option<String>,
+    pub hackatime_user_id: Option<i64>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -44,9 +47,8 @@ pub struct DBUserProject {
     pub ship_ok_at: Option<NaiveDateTime>,
     pub hackatime_project_names: Option<Vec<String>>,
     pub airtable_record_id: Option<String>,
-    pub last_seen_hours: Option<f32>,
-    pub last_active_at: Option<NaiveDateTime>,
     pub nudged_at: Option<NaiveDateTime>,
+    pub submitting_at: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -54,7 +56,6 @@ pub struct HackerParsed {
     pub hca_id: String,
     pub email: String,
     pub first_name: String,
-    pub hca_token: String,
     pub hackatime_token: String,
     pub user_id: i32,
     pub join_at: Option<NaiveDateTime>,
@@ -62,6 +63,7 @@ pub struct HackerParsed {
     pub slack_id: String,
     pub friend_code: i32,
     pub reminders_opt_out: bool,
+    pub invite_token: String,
 }
 
 impl Into<HackerParsed> for DBHacker {
@@ -70,14 +72,19 @@ impl Into<HackerParsed> for DBHacker {
             hca_id: self.hca_id.unwrap_or_default(),
             email: self.email.unwrap_or_default(),
             first_name: self.first_name.unwrap_or_default(),
-            hca_token: self.hca_token.unwrap_or_default(),
-            hackatime_token: self.hackatime_token.unwrap_or_default(),
+            hackatime_token: match self.hackatime_user_id {
+                Some(_) => {
+                    crypto::decrypt_or_empty(self.user_id.unwrap_or_default(), self.hackatime_token)
+                }
+                None => String::new(),
+            },
             user_id: self.user_id.unwrap_or_default(),
             join_at: self.join_at,
             last_login_at: self.last_login_at,
             slack_id: self.slack_id.unwrap_or_default(),
             friend_code: self.friend_code.unwrap_or_default(),
             reminders_opt_out: self.reminders_opt_out.unwrap_or_default(),
+            invite_token: self.invite_token.unwrap_or_default(),
         }
     }
 }
@@ -130,6 +137,7 @@ pub struct UserProjectParsed {
     pub ship_ok_at: Option<NaiveDateTime>,
     pub hackatime_project_names: Vec<String>,
     pub airtable_record_id: Option<String>,
+    pub submitting_at: Option<NaiveDateTime>,
 }
 
 impl Into<UserProjectParsed> for DBUserProject {
@@ -144,6 +152,7 @@ impl Into<UserProjectParsed> for DBUserProject {
             ship_ok_at: self.ship_ok_at,
             hackatime_project_names: self.hackatime_project_names.unwrap_or_default(),
             airtable_record_id: self.airtable_record_id,
+            submitting_at: self.submitting_at,
         }
     }
 }
@@ -152,12 +161,14 @@ impl Into<UserProjectParsed> for DBUserProject {
 pub struct HackatimeTrackedProjectInfo {
     pub name: String,
     pub hours: f32,
+    pub unusable: Option<String>,
 }
 
 #[derive(serde::Serialize)]
 pub struct ClientMe {
     pub first_name: String,
     pub friend_code: i32,
+    pub invite_token: String,
     pub hackatime_linked: bool,
     pub ysws_eligible: bool,
     pub verification_status: String,
@@ -166,13 +177,15 @@ pub struct ClientMe {
 
 #[derive(serde::Serialize)]
 pub struct ClientMemberInfo {
+    pub user_id: i32,
     pub name: String,
-    pub hours_logged: f32,
+    pub hours_logged: Option<f32>,
     pub hours_needed: f32,
     pub first_time: bool,
     pub confirmed: bool,
     pub ready_to_ship: bool,
-    pub hackatime_linked: bool,
+    pub submitting: bool,
+    pub hackatime: HackatimeStatus,
 }
 
 #[derive(serde::Serialize)]
@@ -189,6 +202,27 @@ pub struct ClientProjectInfo {
     pub hackatime_project_names: Vec<String>,
     pub me: ClientMemberInfo,
     pub friend: Option<ClientMemberInfo>,
+    pub join_requests: Vec<ClientJoinRequest>,
+}
+
+#[derive(serde::Serialize)]
+pub struct ClientJoinRequest {
+    pub user_id: i32,
+    pub name: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct ClientOutgoingRequest {
+    pub project_id: i32,
+    pub project_name: String,
+    pub owner_name: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct ClientDashboard {
+    pub hackatime: HackatimeStatus,
+    pub projects: Vec<ClientProjectInfo>,
+    pub join_requests: Vec<ClientOutgoingRequest>,
 }
 
 #[derive(serde::Serialize)]

@@ -5,53 +5,120 @@
     import ProjectDialog from "./ProjectDialog.svelte";
     import DashboardLines from "./DashboardLines.svelte";
     import { onMount } from "svelte";
-    import { api, type Invite, type Me, type ProjectInfo } from "$lib/api";
+    import {
+        api,
+        ApiError,
+        type Dashboard,
+        type Invite,
+        type Me,
+        type PartnerInvite,
+        type ProjectInfo,
+    } from "$lib/api";
+
+    const LINK_ERRORS: Record<string, string> = {
+        taken: "That Hackatime account is already linked to another Dyad account.",
+        failed: "Couldn't link Hackatime. Try again.",
+    };
 
     let me = $state<Me | null>(null);
-    let projects = $state<ProjectInfo[]>([]);
+    let dashboard = $state<Dashboard | null>(null);
+    let projects = $derived(dashboard?.projects ?? []);
     let error = $state("");
+    let link_error = $state("");
     let dialog_open = $state(false);
     let dialog_mode = $state<"add" | "edit">("add");
-    let editing = $state<ProjectInfo | null>(null);
-    let partner_code = $state("");
-    let invite = $state<(Invite & { code: string }) | null>(null);
+    let editing_id = $state<number | null>(null);
+    let editing = $derived(
+        projects.find((p) => p.project_id === editing_id) ?? null,
+    );
+    let partner_invite = $state<PartnerInvite | null>(null);
+    let invite = $state<(Invite & { token: string }) | null>(null);
     let join_first_time = $state(false);
     let joining = $state(false);
     let copied = $state(false);
+    let regenerated = $state(false);
 
-    let linked = $derived(me?.hackatime_linked ?? true);
+    let loaded = $derived(!!me && !!dashboard);
+    let linked = $derived(me?.hackatime_linked ?? false);
+    let active = $derived(
+        projects.filter(
+            (p) => !p.shipped && p.me.confirmed && p.friend?.confirmed,
+        ),
+    );
+    let my_link_expired = $derived(dashboard?.hackatime === "expired");
+    let expired_friends = $derived([
+        ...new Map(
+            active
+                .filter((p) => p.friend?.hackatime === "expired")
+                .map((p) => [p.friend!.user_id, p.friend!.name] as const),
+        ),
+    ]);
+    let hackatime_down = $derived(
+        dashboard?.hackatime === "unreachable" ||
+            active.some(
+                (p) =>
+                    p.me.hackatime === "unreachable" ||
+                    p.friend?.hackatime === "unreachable",
+            ),
+    );
+
+    let refresh_seq = 0;
 
     async function refresh() {
+        const seq = ++refresh_seq;
         try {
-            me = await api<Me>("/dashboard/me");
-            projects = await api<ProjectInfo[]>("/dashboard/projects");
+            const result = await Promise.all([
+                api<Me>("/dashboard/me"),
+                api<Dashboard>("/dashboard/projects"),
+            ]);
+            if (seq !== refresh_seq) return;
+            [me, dashboard] = result;
             error = "";
         } catch (e) {
-            error = (e as Error).message;
+            if (seq === refresh_seq) error = (e as Error).message;
         }
     }
 
-    function take_join_code() {
-        const match = document.cookie.match(/(?:^|;\s*)dyad_join=(\d+)/);
-        if (!match) return null;
-        document.cookie = "dyad_join=; path=/; max-age=0";
-        return match[1];
+    function read_link_error() {
+        const code = new URLSearchParams(location.search).get(
+            "hackatime_error",
+        );
+        if (!code) return;
+        link_error = LINK_ERRORS[code] ?? LINK_ERRORS.failed;
+        history.replaceState(null, "", "/dashboard");
+    }
+
+    function read_join_token() {
+        return (
+            document.cookie.match(/(?:^|;\s*)dyad_join=([0-9a-fA-F]{32})/)?.[1] ??
+            null
+        );
+    }
+
+    function clear_join_token() {
+        document.cookie = "dyad_join=; path=/; max-age=0; secure; samesite=lax";
+    }
+
+    function is_client_error(e: unknown) {
+        return e instanceof ApiError && e.status >= 400 && e.status < 500;
     }
 
     async function check_invite() {
         if (!me?.hackatime_linked) return;
-        const code = take_join_code();
-        if (!code) return;
+        const token = read_join_token();
+        if (!token) return;
         try {
-            const found = await api<Invite>(`/dashboard/invite/${code}`);
-            if (found.project_name) invite = { ...found, code };
-            else new_project(code);
+            const found = await api<Invite>(`/dashboard/invite/${token}`);
+            invite = { ...found, token };
+            if (!found.project_name) new_project({ name: found.name, token });
         } catch (e) {
+            if (is_client_error(e)) clear_join_token();
             error = (e as Error).message;
         }
     }
 
     onMount(async () => {
+        read_link_error();
         await refresh();
         await check_invite();
     });
@@ -61,51 +128,112 @@
         joining = true;
         try {
             await api("/dashboard/join", {
-                friend_code: Number(invite.code),
+                invite_token: invite.token,
                 first_time: join_first_time,
             });
+            clear_join_token();
+            invite = null;
             await refresh();
         } catch (e) {
             error = (e as Error).message;
+            if (is_client_error(e)) {
+                clear_join_token();
+                invite = null;
+            }
         } finally {
-            invite = null;
             joining = false;
         }
     }
 
-    async function copy_invite() {
-        if (!me) return;
-        await navigator.clipboard.writeText(
-            `${location.origin}/join/${me.friend_code}`,
-        );
-        copied = true;
-        setTimeout(() => (copied = false), 2000);
-    }
-
-    async function set_reminders(enabled: boolean) {
+    async function cancel_request(project_id: number) {
         try {
-            await api("/dashboard/reminders", { enabled });
-            if (me) me.reminders = enabled;
+            await api("/dashboard/cancel-join", { project_id });
+            await refresh();
         } catch (e) {
             error = (e as Error).message;
         }
     }
 
-    function new_project(code = "") {
+    function dismiss_invite() {
+        clear_join_token();
+        invite = null;
+    }
+
+    async function copy_invite() {
+        if (!me) return;
+        const link = `${location.origin}/join/${me.invite_token}`;
+        try {
+            await navigator.clipboard.writeText(link);
+            copied = true;
+            setTimeout(() => (copied = false), 2000);
+        } catch {
+            error = `Couldn't copy your invite link. Copy it from here: ${link}`;
+        }
+    }
+
+    async function regenerate_invite() {
+        if (
+            !confirm(
+                "Make a new invite link? Your old link will stop working.",
+            )
+        )
+            return;
+        try {
+            const { invite_token } = await api<{ invite_token: string }>(
+                "/dashboard/regenerate-invite",
+                {},
+            );
+            if (me) me.invite_token = invite_token;
+            regenerated = true;
+            setTimeout(() => (regenerated = false), 2000);
+        } catch (e) {
+            error = (e as Error).message;
+        }
+    }
+
+    async function set_reminders(box: HTMLInputElement) {
+        const enabled = box.checked;
+        try {
+            await api("/dashboard/reminders", { enabled });
+            if (me) me.reminders = enabled;
+        } catch (e) {
+            box.checked = !enabled;
+            error = (e as Error).message;
+        }
+    }
+
+    function new_project(partner: PartnerInvite | null = null) {
         dialog_mode = "add";
-        editing = null;
-        partner_code = code;
+        editing_id = null;
+        partner_invite = partner;
         dialog_open = true;
     }
 
     function edit_project(project: ProjectInfo) {
         dialog_mode = "edit";
-        editing = project;
+        editing_id = project.project_id;
         dialog_open = true;
+    }
+
+    function on_saved(invite_token: string | null) {
+        if (invite_token) {
+            clear_join_token();
+            if (invite?.token === invite_token) invite = null;
+        }
+        refresh();
     }
 
     function link_hackatime() {
         window.location.href = "/hackatime-login";
+    }
+
+    async function logout() {
+        try {
+            await api("/logout", {});
+            window.location.href = "/";
+        } catch (e) {
+            error = (e as Error).message;
+        }
     }
 </script>
 
@@ -119,8 +247,9 @@
     bind:open={dialog_open}
     mode={dialog_mode}
     existing={editing}
-    {partner_code}
-    onsaved={refresh}
+    {partner_invite}
+    onsaved={on_saved}
+    onfailed={refresh}
 />
 
 <div class="top-bar">
@@ -133,19 +262,23 @@
                     >{copied ? "Copied!" : "Copy invite link"}</button
                 >
                 ·
-                <a href="/logout">Log out</a>
+                <button class="link-button" onclick={regenerate_invite}
+                    >{regenerated ? "New link ready!" : "New invite link"}</button
+                >
+                ·
+                <button class="link-button" onclick={logout}>Log out</button>
             </p>
             <label class="friend-code reminders">
                 <input
                     type="checkbox"
                     checked={me.reminders}
-                    onchange={(e) => set_reminders(e.currentTarget.checked)}
+                    onchange={(e) => set_reminders(e.currentTarget)}
                 />
                 Slack me if I haven't worked on a project for a while
             </label>
         {/if}
     </div>
-    {#if linked}
+    {#if loaded && linked}
         <button
             class="new-project-button container"
             onclick={() => new_project()}><h1>＋ Add Project</h1></button
@@ -160,21 +293,34 @@
     </div>
 {/if}
 
-{#if invite}
+{#if invite?.project_name}
     <div class="container banner invite">
-        <span>{invite.name} invited you to join "{invite.project_name}".</span>
+        <span
+            >{invite.name} invited you to join "{invite.project_name}". They'll
+            need to approve your request.</span
+        >
         <label class="reminders">
             <input type="checkbox" bind:checked={join_first_time} />
             My first time coding / doing a YSWS
         </label>
         <button class="banner-button primary" disabled={joining} onclick={join}
-            >Join</button
+            >Request to join</button
         >
         <button
             class="banner-button"
             disabled={joining}
-            onclick={() => (invite = null)}>Dismiss</button
+            onclick={dismiss_invite}>Dismiss</button
         >
+    </div>
+{:else if invite}
+    {@const partner = { name: invite.name, token: invite.token }}
+    <div class="container banner invite">
+        <span>{invite.name} invited you to start a project together.</span>
+        <button
+            class="banner-button primary"
+            onclick={() => new_project(partner)}>Add project</button
+        >
+        <button class="banner-button" onclick={dismiss_invite}>Dismiss</button>
     </div>
 {/if}
 
@@ -182,8 +328,50 @@
     <div class="container banner">{error}</div>
 {/if}
 
+{#if link_error}
+    <div class="container banner">{link_error}</div>
+{/if}
+
+{#if my_link_expired}
+    <div class="container banner invite">
+        <span
+            >Your Hackatime connection stopped working, so your hours can't be
+            checked.</span
+        >
+        <button class="banner-button primary" onclick={link_hackatime}
+            >Relink Hackatime</button
+        >
+    </div>
+{/if}
+
+{#each expired_friends as [user_id, name] (user_id)}
+    <div class="container banner">
+        {name}'s Hackatime connection stopped working, so their hours can't be
+        checked. Ask them to relink it from their Dyad dashboard.
+    </div>
+{/each}
+
+{#if hackatime_down}
+    <div class="container banner">
+        Couldn't reach Hackatime, so some hours are missing. Try again in a bit.
+    </div>
+{/if}
+
+{#each dashboard?.join_requests ?? [] as request (request.project_id)}
+    <div class="container banner invite">
+        <span
+            >You asked to join "{request.project_name}" with {request.owner_name}.
+            Waiting for them to approve.</span
+        >
+        <button
+            class="banner-button"
+            onclick={() => cancel_request(request.project_id)}>Cancel</button
+        >
+    </div>
+{/each}
+
 <div class="container project-container themed-scroll">
-    {#if linked}
+    {#if loaded && linked}
         {#each projects as project (project.project_id)}
             <ProjectEntry
                 {project}
@@ -197,7 +385,7 @@
                 one on your own and send them your invite link.
             </p>
         {/each}
-    {:else}
+    {:else if loaded}
         <div class="link-hackatime-button-container">
             <button class="link-hackatime-button" onclick={link_hackatime}
                 >Link Hackatime to continue</button
@@ -238,20 +426,20 @@
     }
     .new-project-button:hover {
         background-color: var(--accent-primary);
+        color: var(--text-on-accent);
     }
     .friend-code {
         margin: 0;
         color: var(--text-secondary);
     }
-    .friend-code a,
     .banner a {
-        color: var(--accent-secondary);
+        color: var(--accent-text);
     }
     .link-button {
         padding: 0;
         background: none;
         border: none;
-        color: var(--accent-secondary);
+        color: var(--accent-text);
         font: inherit;
         text-decoration: underline;
         cursor: pointer;
@@ -283,9 +471,11 @@
     }
     .banner-button.primary {
         background-color: var(--accent-primary);
+        color: var(--text-on-accent);
     }
     .banner-button:hover:not(:disabled) {
         background-color: var(--accent-secondary);
+        color: var(--text-on-accent);
     }
     .banner-button:disabled {
         opacity: 0.5;
@@ -315,7 +505,7 @@
     .link-hackatime-button {
         display: absolute;
         padding: 8px;
-        color: var(--text-primary);
+        color: var(--text-on-accent);
         background-color: var(--accent-primary);
         margin-top: 10vh;
         font-size: 36px;

@@ -4,9 +4,9 @@ use hc_helper::airtable::{AirtableTable, spawn_airtable_queue_handler};
 
 use crate::{
     dashboard::{
-        delete_project, get_games, get_invite, get_me, get_project_card_data, get_projects_list,
-        invite_link, join_project, respond_invite, serve_dashboard, set_reminders, ship_project,
-        upsert_project,
+        cancel_join, delete_project, get_games, get_invite, get_me, get_project_card_data,
+        get_projects_list, invite_link, join_project, regenerate_invite, respond_invite,
+        respond_join, serve_dashboard, set_reminders, ship_project, unready, upsert_project,
     },
     login::{
         callback_handler, hackatime_callback_handler, hackatime_login_handler, login_handler,
@@ -15,6 +15,8 @@ use crate::{
 };
 
 mod airtable;
+mod cloudflare;
+mod crypto;
 mod dashboard;
 mod db;
 mod error;
@@ -29,6 +31,8 @@ mod slack;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     logging::init();
+    crypto::init().map_err(std::io::Error::other)?;
+    cloudflare::init().await;
 
     spawn_airtable_queue_handler().map_err(std::io::Error::other)?;
     std::sync::LazyLock::force(&games::CATALOG);
@@ -37,22 +41,17 @@ async fn main() -> std::io::Result<()> {
         base_id: std::env::var("AIRTABLE_BASE_ID").unwrap_or_default(),
         table_id_or_name: std::env::var("AIRTABLE_TABLE").unwrap_or_default(),
     };
-    if airtable_table.token.is_empty()
-        || airtable_table.base_id.is_empty()
-        || airtable_table.table_id_or_name.is_empty()
-    {
+    let pool = db::init::init_db().await.map_err(std::io::Error::other)?;
+
+    if !airtable::configured(&airtable_table) {
         log::warn!("Airtable env vars not set; skipping Airtable init");
     } else {
-        airtable::init(&airtable_table)
-            .await
-            .map_err(std::io::Error::other)?;
+        tokio::spawn(airtable::init_until_ready(airtable_table.clone()));
     }
-
-    let pool = db::init::init_db().await.map_err(std::io::Error::other)?;
 
     slack::init();
     tokio::spawn(reminders::poll(pool.clone()));
-    if !airtable_table.token.is_empty() {
+    if airtable::configured(&airtable_table) {
         tokio::spawn(review::poll(airtable_table.clone(), pool.clone()));
     }
     HttpServer::new(move || {
@@ -75,10 +74,15 @@ async fn main() -> std::io::Result<()> {
             .service(delete_project)
             .service(get_invite)
             .service(join_project)
+            .service(respond_join)
+            .service(cancel_join)
+            .service(regenerate_invite)
+            .service(unready)
             .service(set_reminders)
             .service(invite_link)
             .service(Files::new("/", "./ui/build").index_file("index.html"))
             .wrap(from_fn(logging::attach_conn_ctx))
+            .wrap(from_fn(cloudflare::only_cloudflare))
     })
     .bind(("0.0.0.0", 8080))?
     .run()

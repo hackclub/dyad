@@ -51,3 +51,15 @@ impl From<sqlx::Error> for ApiError {
         ApiError::Internal(e.into())
     }
 }
+
+pub fn rejected_by(e: &anyhow::Error) -> Option<String> {
+    e.chain()
+        .filter_map(|c| c.downcast_ref::<reqwest::Error>())
+        .find(|e| matches!(e.status().map(|s| s.as_u16()), Some(401 | 403)))
+        .map(|e| {
+            e.url()
+                .and_then(|u| u.host_str())
+                .unwrap_or_default()
+                .to_string()
+        })
+}

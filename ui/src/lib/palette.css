@@ -13,6 +13,8 @@
 
     --accent-primary: #ff5100;
     --accent-secondary: #ffa782;
+    --accent-text: #ffc4a8;
+    --text-on-accent: #110a0f;
 
     --border: #110a0f;
 }
@@ -20,4 +22,13 @@
 body {
     margin: 0;
     background-color: var(--bg-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
 }

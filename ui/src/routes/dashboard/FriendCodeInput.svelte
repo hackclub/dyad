@@ -58,6 +58,11 @@
     function oninput(i: number, e: Event) {
         const box = e.currentTarget as HTMLInputElement;
         const typed = box.value.replace(/\D/g, "");
+        if ((e as InputEvent).inputType?.startsWith("delete")) {
+            set(i, typed.slice(0, 1));
+            box.value = digits[i];
+            return;
+        }
         box.value = digits[i];
         if (typed.length > 1) fill(i, typed);
         else if (typed) {
@@ -80,7 +85,6 @@
             inputmode="numeric"
             autocomplete="off"
             pattern="[0-9]"
-            required
             aria-label={`Digit ${i + 1}`}
             value={digit}
             onkeydown={(e) => onkeydown(i, e)}
@@ -94,12 +98,13 @@
 <style>
     .code-boxes {
         display: flex;
-        gap: 8px;
+        gap: clamp(4px, 2vw, 8px);
         margin-top: 4px;
     }
     .code-boxes input {
         box-sizing: border-box;
-        width: 48px;
+        flex: 0 1 48px;
+        min-width: 0;
         height: 56px;
         padding: 0;
         background-color: var(--bg-secondary);

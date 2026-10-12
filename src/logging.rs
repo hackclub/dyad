@@ -106,11 +106,7 @@ pub async fn attach_conn_ctx<B: MessageBody>(
     next: Next<B>,
 ) -> Result<ServiceResponse<B>, Error> {
     let tag = {
-        let ip = req
-            .connection_info()
-            .realip_remote_addr()
-            .unwrap_or("unknown")
-            .to_owned();
+        let ip = crate::cloudflare::client_ip(req.request());
         let path = req.path();
         let path = &path[..path.len().min(MAX_PATH_LEN)];
         format!(

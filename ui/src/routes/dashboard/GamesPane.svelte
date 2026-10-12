@@ -17,6 +17,17 @@
             .reduce((sum, g) => sum + g.credits, 0),
     );
     let left = $derived(catalog.credit_budget - spent);
+    let retired = $derived(
+        catalog.games.length
+            ? [
+                  ...new Set(
+                      selected.filter(
+                          (n) => !catalog.games.some((g) => g.name === n),
+                      ),
+                  ),
+              ]
+            : [],
+    );
 
     function toggle(game: Game) {
         selected = selected.includes(game.name)
@@ -41,6 +52,23 @@
     </div>
 
     <div class="grid themed-scroll">
+        {#each retired as name (name)}
+            <div class="tile chosen">
+                <p class="tile-name">{name}</p>
+                <p class="placeholder">No longer offered</p>
+                <div class="tile-footer">
+                    <span class="cost">Free to remove</span>
+                    <button
+                        type="button"
+                        class="toggle"
+                        aria-label={`Remove ${name}`}
+                        onclick={() =>
+                            (selected = selected.filter((n) => n !== name))}
+                        >−</button
+                    >
+                </div>
+            </div>
+        {/each}
         {#each catalog.games as game (game.name)}
             {@const chosen = selected.includes(game.name)}
             {@const affordable = chosen || game.credits <= left}
@@ -115,7 +143,7 @@
         justify-self: end;
         padding: 6px 16px;
         background-color: var(--accent-primary);
-        color: var(--text-secondary);
+        color: var(--text-on-accent);
         border: 4px solid var(--border);
         border-radius: 6px;
         font-family: inherit;
@@ -166,13 +194,21 @@
         color: var(--text-primary);
         font-weight: bold;
     }
-    .tile img {
+    .tile img,
+    .placeholder {
         display: block;
         width: 100%;
         aspect-ratio: 460 / 215;
         object-fit: cover;
         border-radius: 4px;
         background-color: var(--bg-tertiary);
+    }
+    .placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        color: var(--text-secondary);
     }
     .tile-footer {
         display: flex;
@@ -191,7 +227,7 @@
         height: 32px;
         padding: 0;
         background-color: var(--accent-primary);
-        color: var(--text-primary);
+        color: var(--text-on-accent);
         border: 3px solid var(--border);
         border-radius: 6px;
         font-family: inherit;
@@ -203,9 +239,11 @@
     }
     .tile.chosen .toggle {
         background-color: var(--bg-tertiary);
+        color: var(--text-primary);
     }
     .toggle:hover:not(:disabled) {
         background-color: var(--accent-secondary);
+        color: var(--text-on-accent);
     }
     .toggle:disabled {
         cursor: default;

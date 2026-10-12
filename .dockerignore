@@ -1,0 +1,11 @@
+target
+.git
+.env
+.envrc
+.direnv
+.idea
+.junie
+.claude
+ui/node_modules
+ui/build
+ui/.svelte-kit

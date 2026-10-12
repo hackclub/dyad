@@ -7,6 +7,7 @@
         api,
         type GameCatalog,
         type HackatimeProject,
+        type PartnerInvite,
         type ProjectInfo,
     } from "$lib/api";
     import FriendCodeInput from "./FriendCodeInput.svelte";
@@ -27,6 +28,7 @@
         label: string;
         kind: "text" | "url" | "multiline";
         helper: string;
+        max: number;
         required?: boolean;
     }
 
@@ -34,16 +36,18 @@
         open?: boolean;
         mode?: Mode;
         existing?: ProjectInfo | null;
-        partner_code?: string;
-        onsaved?: () => void;
+        partner_invite?: PartnerInvite | null;
+        onsaved?: (invite_token: string | null) => void;
+        onfailed?: () => void;
     }
 
     let {
         open = $bindable(false),
         mode = "add",
         existing = null,
-        partner_code = "",
+        partner_invite = null,
         onsaved,
+        onfailed,
     }: Props = $props();
 
     const HEADINGS: Record<
@@ -68,30 +72,35 @@
             label: "Name",
             kind: "text",
             required: true,
+            max: 100,
             helper: "Your project's name.",
         },
         {
             key: "description",
             label: "Description",
             kind: "multiline",
+            max: 2000,
             helper: "A short summary of what the two of you are building.",
         },
         {
             key: "screenshot_url",
             label: "Screenshot URL",
             kind: "url",
+            max: 500,
             helper: "A link to a screenshot of your project.",
         },
         {
             key: "code_url",
             label: "Code URL",
             kind: "url",
+            max: 500,
             helper: "The link to your source code, like a GitHub repo.",
         },
         {
             key: "playable_url",
             label: "Playable URL",
             kind: "url",
+            max: 500,
             helper: "A link where people can try your project. This can be something like a GitHub Release link too.",
         },
     ];
@@ -100,20 +109,38 @@
         mode === "add" ? FIELDS.filter((f) => f.key === "name") : FIELDS,
     );
 
-    let project = $state<Project>({
-        name: "",
-        description: "",
-        screenshot_url: "",
-        code_url: "",
-        playable_url: "",
-    });
+    function details_of(p: ProjectInfo | null): Project {
+        return {
+            name: p?.name ?? "",
+            description: p?.description ?? "",
+            screenshot_url: p?.screenshot_url ?? "",
+            code_url: p?.code_url ?? "",
+            playable_url: p?.playable_url ?? "",
+        };
+    }
+
+    let project = $state<Project>(details_of(null));
+    let project_id: number | null = null;
+    let generation = 0;
     let friend_code = $state("");
     let games = $state<string[]>([]);
     let first_time = $state(false);
     let selected_hackatime = $state<string[]>([]);
     let catalog = $state<GameCatalog>({ credit_budget: 0, games: [] });
     let hackatime_projects = $state<HackatimeProject[]>([]);
+    let hackatime_loaded = $state(false);
+    let hackatime_error = $state("");
     let hackatime_filter = $state("");
+    let missing_hackatime = $derived(
+        selected_hackatime.filter(
+            (n) => !hackatime_projects.some((ht) => ht.name === n),
+        ),
+    );
+    let details_locked = $derived(
+        mode === "edit" &&
+            (!!existing?.friend?.ready_to_ship ||
+                !!existing?.friend?.submitting),
+    );
     let filtered_hackatime = $derived(
         hackatime_projects.filter((ht) =>
             ht.name
@@ -127,25 +154,29 @@
 
     let dialog: HTMLDialogElement;
     let pane: HTMLDivElement;
-    let form: HTMLFormElement;
     let pressed_outside = false;
     let trigger = $state<HTMLButtonElement>();
     let hackatime_list = $state<HTMLDivElement>();
     let more_below = $state(false);
 
+    const reduced_motion = () =>
+        matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     function reset() {
-        project = {
-            name: existing?.name ?? "",
-            description: existing?.description ?? "",
-            screenshot_url: existing?.screenshot_url ?? "",
-            code_url: existing?.code_url ?? "",
-            playable_url: existing?.playable_url ?? "",
-        };
-        friend_code = partner_code;
+        generation++;
+        saving = false;
+        project_id = existing?.project_id ?? null;
+        project = details_of(existing);
+        friend_code = "";
         games = [...(existing?.games ?? [])];
         first_time = existing?.me.first_time ?? false;
-        selected_hackatime = [...(existing?.hackatime_project_names ?? [])];
+        selected_hackatime = [
+            ...new Set(existing?.hackatime_project_names ?? []),
+        ];
         hackatime_filter = "";
+        hackatime_projects = [];
+        hackatime_loaded = false;
+        hackatime_error = "";
         error = "";
         games_open = false;
     }
@@ -158,7 +189,7 @@
             ? (from.top + from.bottom) / 2 - slot.top
             : slot.height / 2;
         return {
-            duration: 500,
+            duration: reduced_motion() ? 0 : 500,
             easing: cubicOut,
             css: (t: number, u: number) =>
                 `clip-path: inset(${y * u}px ${u * 100}% ${(slot.height - y) * u}px 0 round 16px); opacity: ${0.3 + 0.7 * t};`,
@@ -169,7 +200,7 @@
         const offscreen = `translateX(${-(pane.offsetLeft + pane.offsetWidth)}px)`;
         const frames = [{ transform: offscreen }, { transform: "none" }];
         const timing: KeyframeAnimationOptions = {
-            duration: 300,
+            duration: reduced_motion() ? 0 : 300,
             direction: direction === "in" ? "normal" : "reverse",
         };
         dialog.animate([{ backgroundColor: "transparent" }, {}], timing);
@@ -180,8 +211,7 @@
     }
 
     function on_outside_click(event: MouseEvent) {
-        if (pressed_outside && event.target === dialog && !saving)
-            form.requestSubmit();
+        if (pressed_outside && event.target === dialog) open = false;
         pressed_outside = false;
     }
 
@@ -191,16 +221,33 @@
         else open = false;
     }
 
-    async function load_options() {
-        try {
-            [catalog, hackatime_projects] = await Promise.all([
-                api<GameCatalog>("/dashboard/games"),
-                api<HackatimeProject[]>("/dashboard/projects-list"),
-            ]);
-        } catch (e) {
-            error = (e as Error).message;
-        }
+    function load_options() {
+        api<GameCatalog>("/dashboard/games")
+            .then((c) => (catalog = c))
+            .catch((e) => (error = (e as Error).message));
+        api<HackatimeProject[]>("/dashboard/projects-list")
+            .then((p) => {
+                hackatime_projects = [
+                    ...new Map(p.map((ht) => [ht.name, ht])).values(),
+                ];
+                hackatime_loaded = true;
+            })
+            .catch((e) => (hackatime_error = (e as Error).message));
     }
+
+    function toggle_hackatime(name: string, checked: boolean) {
+        selected_hackatime = selected_hackatime.filter((n) => n !== name);
+        if (checked) selected_hackatime.push(name);
+    }
+
+    $effect(() => {
+        if (!details_locked || !existing) return;
+        const locked = existing;
+        untrack(() => {
+            project = details_of(locked);
+            games = [...locked.games];
+        });
+    });
 
     $effect(() => {
         if (!dialog) return;
@@ -233,24 +280,35 @@
 
     async function handle_submit(event: SubmitEvent) {
         event.preventDefault();
+        const invite = mode === "add" ? partner_invite : null;
+        if (mode === "add" && !invite && friend_code && friend_code.length !== 6) {
+            error =
+                "Enter all six digits of your partner's code, or leave it blank";
+            return;
+        }
         saving = true;
         error = "";
+        const current = generation;
         try {
             await api("/dashboard/upsert-project", {
-                project_id: mode === "edit" ? existing?.project_id : null,
+                project_id: mode === "edit" ? project_id : null,
                 friend_code:
-                    mode === "add" && friend_code ? Number(friend_code) : null,
+                    mode === "add" && !invite && friend_code
+                        ? Number(friend_code)
+                        : null,
+                invite_token: invite?.token ?? null,
                 ...project,
                 games,
                 first_time,
                 hackatime_project_names: selected_hackatime,
             });
-            open = false;
-            onsaved?.();
+            if (current === generation) open = false;
+            onsaved?.(invite?.token ?? null);
         } catch (e) {
-            error = (e as Error).message;
+            if (current === generation) error = (e as Error).message;
+            onfailed?.();
         } finally {
-            saving = false;
+            if (current === generation) saving = false;
         }
     }
 </script>
@@ -271,31 +329,54 @@
 
         <p class="dialog-blurb">{HEADINGS[mode].blurb}</p>
 
-        <form class="dialog-form" bind:this={form} onsubmit={handle_submit}>
+        <form class="dialog-form" onsubmit={handle_submit}>
+            {#if details_locked}
+                <p class="field-helper">
+                    {existing?.friend?.name} is ready to ship, so the project details
+                    are locked. You can still change your Hackatime projects and
+                    first-time setting.
+                </p>
+            {/if}
             {#each visible_fields as field (field.key)}
                 <label class="field">
                     <span class="field-name">{field.label}</span>
                     <span class="field-helper">{field.helper}</span>
                     {#if field.kind === "multiline"}
-                        <textarea bind:value={project[field.key]} rows="4"
+                        <textarea
+                            bind:value={project[field.key]}
+                            maxlength={field.max}
+                            rows="4"
+                            disabled={details_locked}
                         ></textarea>
                     {:else if field.kind === "url"}
                         <input
                             type="url"
                             bind:value={project[field.key]}
+                            maxlength={field.max}
                             placeholder="https://"
+                            disabled={details_locked}
                         />
                     {:else}
                         <input
                             type="text"
                             bind:value={project[field.key]}
+                            maxlength={field.max}
                             required={field.required}
+                            disabled={details_locked}
                         />
                     {/if}
                 </label>
             {/each}
 
-            {#if mode === "add"}
+            {#if mode === "add" && partner_invite}
+                <div class="field">
+                    <span class="field-name">Partner</span>
+                    <span class="field-helper"
+                        >{partner_invite.name} (from their invite link). They'll
+                        need to accept the invite.</span
+                    >
+                </div>
+            {:else if mode === "add"}
                 <div
                     class="field"
                     role="group"
@@ -324,6 +405,7 @@
                         class="games-trigger"
                         class:active={games_open}
                         aria-expanded={games_open}
+                        disabled={details_locked}
                         onclick={() => (games_open = !games_open)}
                     >
                         <span class="games-trigger-text">
@@ -347,34 +429,63 @@
                             bind:this={hackatime_list}
                             onscroll={update_fade}
                         >
-                            {#each filtered_hackatime as ht (ht.name)}
+                            {#each missing_hackatime as name (name)}
                                 <label class="check">
                                     <input
                                         type="checkbox"
-                                        checked={selected_hackatime.includes(
-                                            ht.name,
-                                        )}
+                                        checked
                                         onchange={(e) =>
-                                            (selected_hackatime = e
-                                                .currentTarget.checked
-                                                ? [
-                                                      ...selected_hackatime,
-                                                      ht.name,
-                                                  ]
-                                                : selected_hackatime.filter(
-                                                      (n) => n !== ht.name,
-                                                  ))}
+                                            toggle_hackatime(
+                                                name,
+                                                e.currentTarget.checked,
+                                            )}
                                     />
-                                    {ht.name}
-                                    <span class="field-helper"
-                                        >({ht.hours}h)</span
-                                    >
+                                    {name}
+                                    {#if hackatime_loaded}
+                                        <span class="field-helper"
+                                            >(not found on Hackatime)</span
+                                        >
+                                    {/if}
+                                </label>
+                            {/each}
+                            {#each filtered_hackatime as ht (ht.name)}
+                                {@const chosen = selected_hackatime.includes(
+                                    ht.name,
+                                )}
+                                {@const blocked = !!ht.unusable && !chosen}
+                                <label class="check">
+                                    <input
+                                        type="checkbox"
+                                        checked={chosen}
+                                        disabled={blocked}
+                                        onchange={(e) =>
+                                            toggle_hackatime(
+                                                ht.name,
+                                                e.currentTarget.checked,
+                                            )}
+                                    />
+                                    <span>
+                                        <span class:blocked
+                                            >{ht.name}
+                                            <span class="field-helper"
+                                                >({ht.hours}h)</span
+                                            ></span
+                                        >
+                                        {#if ht.unusable}
+                                            <span class="field-helper reason"
+                                                >{ht.unusable}</span
+                                            >
+                                        {/if}
+                                    </span>
                                 </label>
                             {:else}
                                 <span class="field-helper"
-                                    >{hackatime_projects.length
-                                        ? "No matching projects."
-                                        : "No Hackatime projects found."}</span
+                                    >{hackatime_error ||
+                                        (!hackatime_loaded
+                                            ? "Loading..."
+                                            : hackatime_projects.length
+                                              ? "No matching projects."
+                                              : "No Hackatime projects found.")}</span
                                 >
                             {/each}
                         </div>
@@ -389,12 +500,12 @@
                         />
                     </div>
                 </div>
-
-                <label class="check">
-                    <input type="checkbox" bind:checked={first_time} />
-                    This is my first time coding or doing a Hack Club YSWS
-                </label>
             {/if}
+
+            <label class="check">
+                <input type="checkbox" bind:checked={first_time} />
+                This is my first time coding or doing a Hack Club YSWS
+            </label>
 
             {#if error}
                 <p class="dialog-error">{error}</p>
@@ -547,6 +658,12 @@
         text-align: left;
         cursor: pointer;
     }
+    .games-trigger:disabled,
+    .field input:disabled,
+    .field textarea:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
     .games-trigger:focus-visible,
     .games-trigger.active {
         outline: 3px solid var(--accent-primary);
@@ -606,9 +723,15 @@
     .check input {
         accent-color: var(--accent-primary);
     }
+    .blocked {
+        opacity: 0.5;
+    }
+    .reason {
+        display: block;
+    }
     .dialog-error {
         margin: 0;
-        color: var(--accent-secondary);
+        color: var(--accent-text);
     }
 
     .dialog-actions {
@@ -633,10 +756,11 @@
     .cancel-button:hover {
         background-color: var(--bg-tertiary);
     }
-    .confirm-button {
+    .dialog-actions .confirm-button {
         background-color: var(--accent-primary);
+        color: var(--text-on-accent);
     }
-    .confirm-button:hover {
+    .dialog-actions .confirm-button:hover {
         background-color: var(--accent-secondary);
     }
 </style>

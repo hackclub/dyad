@@ -5,6 +5,7 @@ fn main() {
     println!("cargo:rerun-if-changed=ui/static");
     println!("cargo:rerun-if-changed=ui/vite.config.ts");
     println!("cargo:rerun-if-changed=ui/package.json");
+    println!("cargo:rerun-if-changed=migrations");
 
     let status = Command::new("npm")
         .args(["run", "build"])

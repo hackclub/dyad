@@ -1,20 +1,36 @@
 export interface Me {
   first_name: string;
   friend_code: number;
+  invite_token: string;
   hackatime_linked: boolean;
   ysws_eligible: boolean;
   verification_status: string;
   reminders: boolean;
 }
 
+export type HackatimeStatus = "ok" | "unlinked" | "expired" | "unreachable";
+
 export interface Member {
+  user_id: number;
   name: string;
-  hours_logged: number;
+  hours_logged: number | null;
   hours_needed: number;
   first_time: boolean;
   confirmed: boolean;
   ready_to_ship: boolean;
-  hackatime_linked: boolean;
+  submitting: boolean;
+  hackatime: HackatimeStatus;
+}
+
+export interface JoinRequest {
+  user_id: number;
+  name: string;
+}
+
+export interface OutgoingRequest {
+  project_id: number;
+  project_name: string;
+  owner_name: string;
 }
 
 export interface ProjectInfo {
@@ -30,11 +46,32 @@ export interface ProjectInfo {
   hackatime_project_names: string[];
   me: Member;
   friend: Member | null;
+  join_requests: JoinRequest[];
+}
+
+export interface Dashboard {
+  hackatime: HackatimeStatus;
+  projects: ProjectInfo[];
+  join_requests: OutgoingRequest[];
 }
 
 export interface Invite {
   name: string;
   project_name: string | null;
+}
+
+export interface PartnerInvite {
+  name: string;
+  token: string;
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
 }
 
 export interface Game {
@@ -52,6 +89,7 @@ export interface GameCatalog {
 export interface HackatimeProject {
   name: string;
   hours: number;
+  unusable: string | null;
 }
 
 export async function api<T>(path: string, body?: unknown): Promise<T> {
@@ -66,7 +104,7 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
   }
   if (!res.ok) {
     const data = await res.json().catch(() => null);
-    throw new Error(data?.error ?? `Request failed (${res.status})`);
+    throw new ApiError(data?.error ?? `Request failed (${res.status})`, res.status);
   }
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;

@@ -1,7 +1,16 @@
 <script>
     import "$lib/palette.css";
+    import { onMount } from "svelte";
     import BackgroundLines from "./BackgroundLines.svelte";
     import MainLandingContent from "./MainLandingContent.svelte";
+
+    let login_failed = $state(false);
+
+    onMount(() => {
+        if (!new URLSearchParams(location.search).has("login_error")) return;
+        login_failed = true;
+        history.replaceState(null, "", "/");
+    });
 </script>
 
 <svelte:head>
@@ -9,6 +18,12 @@
 </svelte:head>
 
 <BackgroundLines />
+
+{#if login_failed}
+    <button class="login-error" onclick={() => (login_failed = false)}
+        >Couldn't finish signing you in. Try again in a bit.</button
+    >
+{/if}
 
 <!-- Title -->
 <div class="title">
@@ -58,6 +73,21 @@
         overscroll-behavior: none;
     }
 
+    .login-error {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        padding: 8px 16px;
+        border: 4px solid var(--border);
+        border-radius: 16px;
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+        font: inherit;
+        cursor: pointer;
+    }
+
     .title {
         height: 65vh;
         width: calc(80vw + 4px);
@@ -104,7 +134,7 @@
     }
 
     .dashboard-btn {
-        color: var(--bg-secondary);
+        color: var(--text-on-accent);
         text-decoration: none;
         background-color: var(--accent-primary);
         width: calc(min(400px, 60vw) - 4px);
@@ -128,7 +158,6 @@
 
     .dashboard-btn:hover {
         background-color: var(--accent-secondary);
-        color: var(--accent-primary);
         border-color: var(--bg-secondary);
     }
 

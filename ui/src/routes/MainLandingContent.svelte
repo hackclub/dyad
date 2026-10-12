@@ -130,6 +130,6 @@
     }
 
     .desc-link {
-        color: var(--accent-primary);
+        color: var(--accent-text);
     }
 </style>

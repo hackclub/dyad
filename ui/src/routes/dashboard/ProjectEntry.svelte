@@ -1,6 +1,6 @@
 <script lang="ts">
     import "$lib/palette.css";
-    import { api, type ProjectInfo } from "$lib/api";
+    import { api, type HackatimeStatus, type ProjectInfo } from "$lib/api";
 
     interface Props {
         project: ProjectInfo;
@@ -10,17 +10,16 @@
     }
     let { project, can_ship, onedit, onchange }: Props = $props();
 
-    let incomplete = $derived(
+    let missing_details = $derived(
         [
             project.name,
             project.description,
             project.screenshot_url,
             project.code_url,
             project.playable_url,
-        ].some((f) => !f) ||
-            project.games.length === 0 ||
-            project.hackatime_project_names.length === 0,
+        ].some((f) => !f) || project.games.length === 0,
     );
+    let no_hackatime = $derived(project.hackatime_project_names.length === 0);
 
     let first_time = $state(false);
     let busy = $state(false);
@@ -31,16 +30,16 @@
         error = "";
         try {
             await api(path, body);
-            onchange();
         } catch (e) {
             error = (e as Error).message;
         } finally {
             busy = false;
+            onchange();
         }
     }
 
     function respond(accept: boolean) {
-        if (!accept && !confirm(`Decline "${project.name}"? This deletes it.`))
+        if (!accept && !confirm(`Decline the invite to "${project.name}"?`))
             return;
         run("/dashboard/respond-invite", {
             project_id: project.project_id,
@@ -53,10 +52,44 @@
         run("/dashboard/ship", { project_id: project.project_id });
     }
 
+    function unready() {
+        run("/dashboard/unready", { project_id: project.project_id });
+    }
+
+    function respond_join(user_id: number, approve: boolean) {
+        run("/dashboard/respond-join", {
+            project_id: project.project_id,
+            user_id,
+            approve,
+        });
+    }
+
     function remove() {
         if (!confirm(`Delete "${project.name}"? This can't be undone.`)) return;
         run("/dashboard/delete-project", { project_id: project.project_id });
     }
+
+    const HACKATIME_PROBLEM: Record<HackatimeStatus, string> = {
+        ok: "",
+        unlinked: "Hackatime not linked",
+        expired: "Hackatime needs relinking",
+        unreachable: "Couldn't reach Hackatime",
+    };
+
+    let ship_blocker = $derived(
+        !can_ship
+            ? "Verify your identity to ship"
+            : missing_details
+              ? "Fill in the name, description, code URL, playable URL, screenshot and games before shipping"
+              : no_hackatime
+                ? "Link at least one Hackatime project before shipping"
+                : project.me.hours_logged === null
+                  ? HACKATIME_PROBLEM[project.me.hackatime] ||
+                    "Couldn't reach Hackatime"
+                  : project.me.hours_logged < project.me.hours_needed
+                    ? `You've logged ${project.me.hours_logged}h of your ${project.me.hours_needed}h target`
+                    : "",
+    );
 
     const REVIEW_STATUS: Record<string, string> = {
         pending: "Shipped! It's in review.",
@@ -75,19 +108,40 @@
     </p>
 
     {#if project.friend && project.me.confirmed && project.friend.confirmed}
-        {#each [{ label: "You", m: project.me }, { label: project.friend.name, m: project.friend }] as { label, m } (label)}
+        {#each [{ key: "me", label: "You", m: project.me }, { key: "friend", label: project.friend.name, m: project.friend }] as { key, label, m } (key)}
             <p class="hours">
                 {label}:
-                {#if m.hackatime_linked}
+                {#if m.hours_logged !== null}
                     {m.hours_logged} / {m.hours_needed}h
                 {:else}
-                    Hackatime not linked
+                    {HACKATIME_PROBLEM[m.hackatime] || `- / ${m.hours_needed}h`}
                 {/if}
             </p>
         {/each}
     {/if}
 
-    {#if project.me.confirmed && !project.shipped && incomplete}
+    {#if !project.friend && project.join_requests.length}
+        <div class="requests">
+            {#each project.join_requests as request (request.user_id)}
+                <div class="actions">
+                    <p class="status">{request.name} wants to join</p>
+                    <button
+                        class="primary"
+                        disabled={busy}
+                        onclick={() => respond_join(request.user_id, true)}
+                        >Approve</button
+                    >
+                    <button
+                        disabled={busy}
+                        onclick={() => respond_join(request.user_id, false)}
+                        >Decline</button
+                    >
+                </div>
+            {/each}
+        </div>
+    {/if}
+
+    {#if project.me.confirmed && !project.shipped && (missing_details || no_hackatime)}
         <p class="reminder">
             Some information missing, make sure you edit before shipping!
         </p>
@@ -112,27 +166,25 @@
             <button disabled={busy} onclick={remove}>Delete</button>
         {:else if !project.friend.confirmed}
             <p class="status">Waiting for {project.friend.name} to accept</p>
+            <button disabled={busy} onclick={onedit}>Edit</button>
+            <button disabled={busy} onclick={remove}>Delete</button>
         {:else if project.shipped}
             <p class="status">
                 {REVIEW_STATUS[project.review_status ?? "pending"]}
             </p>
+        {:else if project.me.submitting}
+            <p class="status">Submitting for review... Refresh in a minute.</p>
+        {:else if !project.me.ready_to_ship}
+            <button disabled={busy} onclick={onedit}>Edit</button>
+            <button
+                class="primary"
+                disabled={busy || !!ship_blocker}
+                title={ship_blocker}
+                onclick={ship}>Ready to ship</button
+            >
         {:else}
-            {#if !project.me.ready_to_ship}
-                <button disabled={busy} onclick={onedit}>Edit</button>
-                <button
-                    class="primary"
-                    disabled={busy || !can_ship}
-                    title={can_ship ? "" : "Verify your identity to ship"}
-                    onclick={ship}>Ready to ship</button
-                >
-            {:else if !project.friend.ready_to_ship}
-                <button disabled={busy} onclick={onedit}>Edit</button>
-                <p class="status">Waiting for {project.friend.name} to ship</p>
-            {:else}
-                <button class="primary" disabled={busy} onclick={ship}
-                    >Retry submission</button
-                >
-            {/if}
+            <p class="status">Waiting for {project.friend.name} to ship</p>
+            <button disabled={busy} onclick={unready}>Not ready</button>
         {/if}
     </div>
 
@@ -169,6 +221,11 @@
     .hours {
         color: var(--text-primary);
     }
+    .requests {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
     .actions {
         margin-top: auto;
         display: flex;
@@ -190,9 +247,11 @@
     }
     .actions button.primary {
         background-color: var(--accent-primary);
+        color: var(--text-on-accent);
     }
     .actions button:hover:not(:disabled) {
         background-color: var(--accent-secondary);
+        color: var(--text-on-accent);
     }
     .actions button:disabled {
         opacity: 0.5;
@@ -211,12 +270,12 @@
         color: var(--text-secondary);
     }
     .reminder {
-        color: var(--accent-secondary);
+        color: var(--accent-text);
         font-weight: bold;
         text-align: center;
     }
     .error {
-        color: var(--accent-secondary);
+        color: var(--accent-text);
         text-align: center;
     }
 </style>
