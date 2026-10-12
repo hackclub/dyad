@@ -65,6 +65,10 @@
     <a href="https://forms.hackclub.com/bounty" style="color: #993100;"
         >Fulfillment Bounty</a
     >
+    <a
+        href="https://security.hackclub.com"
+        style="color: #993100; margin-left: 3vw;">Security Bounty</a
+    >
 </footer>
 
 <style>
