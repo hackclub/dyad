@@ -169,7 +169,7 @@
         background-color: var(--bg-tertiary);
         width: 10vh;
         height: calc(5vh + 1px);
-        left: calc(min(400px, 60vw) - 5vh);
+        left: calc(min(400px, 60vw) - 5vh - 2px);
         margin-top: calc(5vh + 4px);
         z-index: -7;
         position: absolute;
