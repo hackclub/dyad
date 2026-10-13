@@ -37,6 +37,9 @@
     let joining = $state(false);
     let copied = $state(false);
     let regenerated = $state(false);
+    let last_refresh = $state(Date.now());
+    let now = $state(Date.now());
+    let since = $derived(Math.max(0, Math.floor((now - last_refresh) / 1000)));
 
     let loaded = $derived(!!me && !!dashboard);
     let linked = $derived(me?.hackatime_linked ?? false);
@@ -73,6 +76,8 @@
             ]);
             if (seq !== refresh_seq) return;
             [me, dashboard] = result;
+            last_refresh = Date.now();
+            now = last_refresh;
             error = "";
         } catch (e) {
             if (seq === refresh_seq) error = (e as Error).message;
@@ -117,10 +122,15 @@
         }
     }
 
-    onMount(async () => {
+    onMount(() => {
+        const tick = setInterval(() => (now = Date.now()), 1000);
+        const auto = setInterval(refresh, 30_000);
         read_link_error();
-        await refresh();
-        await check_invite();
+        refresh().then(check_invite);
+        return () => {
+            clearInterval(tick);
+            clearInterval(auto);
+        };
     });
 
     async function join() {
@@ -207,12 +217,14 @@
         editing_id = null;
         partner_invite = partner;
         dialog_open = true;
+        refresh();
     }
 
     function edit_project(project: ProjectInfo) {
         dialog_mode = "edit";
         editing_id = project.project_id;
         dialog_open = true;
+        refresh();
     }
 
     function on_saved(invite_token: string | null) {
@@ -276,6 +288,10 @@
                 />
                 Slack me if I haven't worked on a project for a while
             </label>
+            <p class="friend-code">
+                <button class="link-button" onclick={refresh}>Refresh</button>
+                · {since}s since last refresh
+            </p>
         {/if}
     </div>
     {#if loaded && linked}

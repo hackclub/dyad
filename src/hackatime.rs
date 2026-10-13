@@ -57,9 +57,7 @@ pub fn hours_in(projects: &[Project], hackatime_project_names: &[String]) -> f32
 }
 
 pub fn unusable(project: &Project) -> Option<&'static str> {
-    if project.name.contains('.') {
-        Some("Hackatime can't look up projects with a dot in the name. Rename it in Hackatime first.")
-    } else if project.archived {
+    if project.archived {
         Some("It's archived in Hackatime. Unarchive it first.")
     } else {
         None

@@ -1135,13 +1135,8 @@ async fn check_ready(
     for name in &m.mine.hackatime_project_names {
         let project = projects.iter().find(|p| &p.name == name);
         if let Some(reason) = project.and_then(unusable) {
-            let follow_up = if name.contains('.') {
-                " Then edit this project to pick the new name."
-            } else {
-                ""
-            };
             return Err(ApiError::BadRequest(format!(
-                "Can't ship with \"{name}\". {reason}{follow_up}"
+                "Can't ship with \"{name}\". {reason}"
             )));
         }
         if !project.is_some_and(|p| p.total_duration_seconds > 0.0) {
