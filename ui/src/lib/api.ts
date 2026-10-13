@@ -109,3 +109,37 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
 }
+
+export interface StatsHour {
+  hour: string;
+  signed_up: number;
+  projects_created: number;
+  shipped: number;
+}
+
+export interface Funnel {
+  signed_in: number;
+  linked_hackatime: number;
+  created_project: number;
+  paired: number;
+  logged_time: number;
+  shipped: number;
+  approved: number;
+}
+
+export interface Stats {
+  hours: StatsHour[];
+  totals: {
+    hours_building: number;
+    projects_created: number;
+    pairs_formed: number;
+    projects_shipped: number;
+    projects_approved: number;
+    hours_approved: number;
+    logged_in_last_day: number;
+    awaiting_review: number;
+    average_wait_hours: number | null;
+    average_approval_hours: number | null;
+  };
+  funnel: Record<"day" | "week" | "all", Funnel>;
+}

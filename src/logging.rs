@@ -111,6 +111,25 @@ fn loggable_path(path: &str) -> String {
     path[..path.floor_char_boundary(MAX_PATH_LEN)].to_string()
 }
 
+pub async fn attach_conn_ctx<B: MessageBody>(
+    req: ServiceRequest,
+    next: Next<B>,
+) -> Result<ServiceResponse<B>, Error> {
+    let tag = {
+        let ip = crate::cloudflare::client_ip(req.request());
+        let path = loggable_path(req.path());
+        format!(
+            "#{} {} {} {}",
+            NEXT_REQ_ID.fetch_add(1, Ordering::Relaxed),
+            ip,
+            req.method(),
+            path
+        )
+    };
+
+    CONN_CTX.scope(Arc::new(tag), next.call(req)).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::loggable_path;
@@ -130,23 +149,4 @@ mod tests {
         assert!(logged.len() <= 128);
         assert!(path.starts_with(&logged));
     }
-}
-
-pub async fn attach_conn_ctx<B: MessageBody>(
-    req: ServiceRequest,
-    next: Next<B>,
-) -> Result<ServiceResponse<B>, Error> {
-    let tag = {
-        let ip = crate::cloudflare::client_ip(req.request());
-        let path = loggable_path(req.path());
-        format!(
-            "#{} {} {} {}",
-            NEXT_REQ_ID.fetch_add(1, Ordering::Relaxed),
-            ip,
-            req.method(),
-            path
-        )
-    };
-
-    CONN_CTX.scope(Arc::new(tag), next.call(req)).await
 }

@@ -16,6 +16,7 @@ use crate::{
         callback_handler, hackatime_callback_handler, hackatime_login_handler, login_handler,
         logout_handler,
     },
+    stats::{get_stats, serve_stats},
 };
 
 mod airtable;
@@ -31,6 +32,7 @@ mod login;
 mod reminders;
 mod review;
 mod slack;
+mod stats;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -84,6 +86,8 @@ async fn main() -> std::io::Result<()> {
             .service(unready)
             .service(set_reminders)
             .service(invite_link)
+            .service(serve_stats)
+            .service(get_stats)
             .service(Files::new("/", "./ui/build").index_file("index.html"))
             .wrap(
                 DefaultHeaders::new()
