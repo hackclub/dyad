@@ -268,18 +268,6 @@
     <div class="container">
         <h1>Dyad Dashboard</h1>
         {#if me}
-            <p class="friend-code">
-                Your friend code: <strong>{me.friend_code}</strong> ·
-                <button class="link-button" onclick={copy_invite}
-                    >{copied ? "Copied!" : "Copy invite link"}</button
-                >
-                ·
-                <button class="link-button" onclick={regenerate_invite}
-                    >{regenerated ? "New link ready!" : "New invite link"}</button
-                >
-                ·
-                <button class="link-button" onclick={logout}>Log out</button>
-            </p>
             <label class="friend-code reminders">
                 <input
                     type="checkbox"
@@ -290,10 +278,27 @@
             </label>
             <p class="friend-code">
                 <button class="link-button" onclick={refresh}>Refresh</button>
-                · {since}s since last refresh
+                · {since}s since last refresh ·
+                <button class="link-button" onclick={logout}>Log out</button>
             </p>
         {/if}
     </div>
+    {#if me}
+        <div class="container friend-box">
+            <p class="friend-code">
+                Your friend code: <strong>{me.friend_code}</strong>
+            </p>
+            <p class="friend-code">
+                <button class="link-button" onclick={copy_invite}
+                    >{copied ? "Copied!" : "Copy invite link"}</button
+                >
+                ·
+                <button class="link-button" onclick={regenerate_invite}
+                    >{regenerated ? "New link ready!" : "New invite link"}</button
+                >
+            </p>
+        </div>
+    {/if}
     {#if loaded && linked}
         <button
             class="new-project-button container"
@@ -435,6 +440,13 @@
         display: flex;
         justify-content: space-between;
         align-items: stretch;
+    }
+    .friend-box {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 8px;
+        text-align: center;
     }
     .new-project-button {
         color: var(--text-primary);
