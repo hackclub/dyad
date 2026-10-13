@@ -40,8 +40,8 @@ pub fn status(summaries: &Summaries) -> HackatimeStatus {
     }
 }
 
-pub fn round_hours(seconds: f64) -> f32 {
-    ((seconds as f32 / 3600.0) * 100.0).round() / 100.0
+pub fn floor_hours(seconds: f64) -> f32 {
+    ((seconds / 36.0).floor() / 100.0) as f32
 }
 
 pub fn seconds_in(projects: &[Project], hackatime_project_names: &[String]) -> f64 {
@@ -53,7 +53,7 @@ pub fn seconds_in(projects: &[Project], hackatime_project_names: &[String]) -> f
 }
 
 pub fn hours_in(projects: &[Project], hackatime_project_names: &[String]) -> f32 {
-    round_hours(seconds_in(projects, hackatime_project_names))
+    floor_hours(seconds_in(projects, hackatime_project_names))
 }
 
 pub fn unusable(project: &Project) -> Option<&'static str> {

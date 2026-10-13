@@ -88,6 +88,9 @@ pub async fn init() {
     if *ALLOW_ANY {
         warn!("ALLOW_NON_CLOUDFLARE is set; accepting requests that didn't come through Cloudflare");
     }
+    if BASE_URL.is_none() {
+        warn!("BASE_URL is not set; OAuth redirects will trust the Host header");
+    }
     let networks = match fetch().await {
         Ok(networks) => {
             info!("Loaded {} Cloudflare IP ranges", networks.len());

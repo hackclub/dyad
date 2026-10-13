@@ -63,6 +63,9 @@ fn last_activity(row: &ActivityRow, summaries: Option<&Summaries>) -> Option<Opt
     let parsed: Vec<NaiveDateTime> = stamps.iter().filter_map(|s| parse_time(s)).collect();
     if parsed.len() < stamps.len() {
         warn!("Couldn't parse some Hackatime heartbeat times {stamps:?}");
+        if parsed.is_empty() {
+            return None;
+        }
     }
     Some(parsed.into_iter().max())
 }

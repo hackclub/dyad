@@ -109,13 +109,13 @@
     }
 
     async function check_invite() {
-        if (!me?.hackatime_linked) return;
         const token = read_join_token();
         if (!token) return;
         try {
             const found = await api<Invite>(`/dashboard/invite/${token}`);
             invite = { ...found, token };
-            if (!found.project_name) new_project({ name: found.name, token });
+            if (!found.project_name && linked)
+                new_project({ name: found.name, token });
         } catch (e) {
             if (is_client_error(e)) clear_join_token();
             error = (e as Error).message;
@@ -319,13 +319,21 @@
             >{invite.name} invited you to join "{invite.project_name}". They'll
             need to approve your request.</span
         >
-        <label class="reminders">
-            <input type="checkbox" bind:checked={join_first_time} />
-            My first time coding / doing a YSWS
-        </label>
-        <button class="banner-button primary" disabled={joining} onclick={join}
-            >Request to join</button
-        >
+        {#if linked}
+            <label class="reminders">
+                <input type="checkbox" bind:checked={join_first_time} />
+                My first time coding / doing a YSWS
+            </label>
+            <button
+                class="banner-button primary"
+                disabled={joining}
+                onclick={join}>Request to join</button
+            >
+        {:else}
+            <button class="banner-button primary" onclick={link_hackatime}
+                >Link Hackatime to continue</button
+            >
+        {/if}
         <button
             class="banner-button"
             disabled={joining}
@@ -336,10 +344,16 @@
     {@const partner = { name: invite.name, token: invite.token }}
     <div class="container banner invite">
         <span>{invite.name} invited you to start a project together.</span>
-        <button
-            class="banner-button primary"
-            onclick={() => new_project(partner)}>Add project</button
-        >
+        {#if linked}
+            <button
+                class="banner-button primary"
+                onclick={() => new_project(partner)}>Add project</button
+            >
+        {:else}
+            <button class="banner-button primary" onclick={link_hackatime}
+                >Link Hackatime to continue</button
+            >
+        {/if}
         <button class="banner-button" onclick={dismiss_invite}>Dismiss</button>
     </div>
 {/if}

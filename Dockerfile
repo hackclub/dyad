@@ -12,7 +12,7 @@ RUN npm --prefix ui ci
 
 COPY . .
 
-RUN cargo build --release
+RUN cargo build --release --locked
 
 FROM debian:bookworm-slim
 

@@ -33,8 +33,8 @@ use crate::{
     error::{ApiError, rejected_by},
     games,
     hackatime::{
-        HackatimeStatus, get_summaries, get_summaries_for, hours_in, round_hours, seconds_in,
-        status, unusable,
+        HackatimeStatus, floor_hours, get_summaries, get_summaries_for, hours_in, status,
+        unusable,
     },
     slack::{self, plain},
 };
@@ -205,7 +205,7 @@ pub async fn get_projects_list(
         .into_iter()
         .map(|p| HackatimeTrackedProjectInfo {
             unusable: unusable(&p).map(String::from),
-            hours: round_hours(p.total_duration_seconds),
+            hours: floor_hours(p.total_duration_seconds),
             name: p.name,
         })
         .collect();
@@ -918,7 +918,7 @@ pub async fn invite_link(path: web::Path<String>) -> HttpResponse {
         response.cookie(
             Cookie::build(JOIN_COOKIE, invite_token)
                 .path("/")
-                .max_age(actix_web::cookie::time::Duration::days(1))
+                .max_age(actix_web::cookie::time::Duration::days(30))
                 .same_site(SameSite::Lax)
                 .secure(true)
                 .finish(),
@@ -1145,15 +1145,13 @@ async fn check_ready(
             )));
         }
     }
-    let seconds = seconds_in(&projects, &m.mine.hackatime_project_names);
-    if seconds < f64::from(m.mine.hours_needed) * 3600.0 {
+    let hours = hours_in(&projects, &m.mine.hackatime_project_names);
+    if hours < m.mine.hours_needed {
         return Err(ApiError::BadRequest(format!(
-            "You've logged {}h of your {}h target",
-            (seconds / 36.0).floor() / 100.0,
+            "You've logged {hours}h of your {}h target",
             m.mine.hours_needed
         )));
     }
-    let hours = hours_in(&projects, &m.mine.hackatime_project_names);
     Ok((m, hours))
 }
 

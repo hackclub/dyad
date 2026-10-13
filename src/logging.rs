@@ -18,6 +18,7 @@ use pretty_env_logger::env_logger::{Env, fmt::Color};
 use sqlx::types::chrono::Utc;
 
 const MAX_PATH_LEN: usize = 128;
+const TOKEN_PREFIXES: [&str; 2] = ["/join/", "/dashboard/invite/"];
 
 static NEXT_REQ_ID: AtomicU64 = AtomicU64::new(1);
 static MAX_TARGET_WIDTH: AtomicUsize = AtomicUsize::new(0);
@@ -101,14 +102,43 @@ pub fn init() {
     log::set_max_level(max_level);
 }
 
+fn loggable_path(path: &str) -> String {
+    for prefix in TOKEN_PREFIXES {
+        if path.len() > prefix.len() && path.starts_with(prefix) {
+            return format!("{prefix}<token>");
+        }
+    }
+    path[..path.floor_char_boundary(MAX_PATH_LEN)].to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::loggable_path;
+
+    #[test]
+    fn hides_invite_tokens() {
+        assert_eq!(loggable_path("/join/0123abcd"), "/join/<token>");
+        assert_eq!(loggable_path("/dashboard/invite/0123abcd"), "/dashboard/invite/<token>");
+        assert_eq!(loggable_path("/join/"), "/join/");
+        assert_eq!(loggable_path("/dashboard/projects"), "/dashboard/projects");
+    }
+
+    #[test]
+    fn truncates_on_a_char_boundary() {
+        let path = format!("/{}", "é".repeat(100));
+        let logged = loggable_path(&path);
+        assert!(logged.len() <= 128);
+        assert!(path.starts_with(&logged));
+    }
+}
+
 pub async fn attach_conn_ctx<B: MessageBody>(
     req: ServiceRequest,
     next: Next<B>,
 ) -> Result<ServiceResponse<B>, Error> {
     let tag = {
         let ip = crate::cloudflare::client_ip(req.request());
-        let path = req.path();
-        let path = &path[..path.len().min(MAX_PATH_LEN)];
+        let path = loggable_path(req.path());
         format!(
             "#{} {} {} {}",
             NEXT_REQ_ID.fetch_add(1, Ordering::Relaxed),

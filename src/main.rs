@@ -1,5 +1,9 @@
 use actix_files::Files;
-use actix_web::{App, HttpServer, middleware::from_fn, web};
+use actix_web::{
+    App, HttpServer,
+    middleware::{DefaultHeaders, from_fn},
+    web,
+};
 use hc_helper::airtable::{AirtableTable, spawn_airtable_queue_handler};
 
 use crate::{
@@ -81,6 +85,11 @@ async fn main() -> std::io::Result<()> {
             .service(set_reminders)
             .service(invite_link)
             .service(Files::new("/", "./ui/build").index_file("index.html"))
+            .wrap(
+                DefaultHeaders::new()
+                    .add(("X-Frame-Options", "DENY"))
+                    .add(("Content-Security-Policy", "frame-ancestors 'none'")),
+            )
             .wrap(from_fn(logging::attach_conn_ctx))
             .wrap(from_fn(cloudflare::only_cloudflare))
     })
