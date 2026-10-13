@@ -46,9 +46,6 @@
 <!-- Dashboard button -->
 <a href="/login" class="dashboard-btn">Open Dashboard</a>
 
-<!-- Little nub -->
-<div class="little-nub"></div>
-
 <!-- Main content -->
 <MainLandingContent></MainLandingContent>
 
@@ -163,26 +160,6 @@
     .dashboard-btn:hover {
         background-color: var(--accent-secondary);
         border-color: var(--bg-secondary);
-    }
-
-    .little-nub {
-        background-color: var(--bg-tertiary);
-        width: 10vh;
-        height: calc(5vh + 1px);
-        left: calc(min(400px, 60vw) - 5vh - 2px);
-        margin-top: calc(5vh + 4px);
-        z-index: -7;
-        position: absolute;
-        -webkit-mask-image: radial-gradient(
-            circle 5vh at top right,
-            transparent 98%,
-            black 100%
-        );
-        mask-image: radial-gradient(
-            circle 5vh at top right,
-            transparent 98%,
-            black 100%
-        );
     }
 
     .site-footer {
