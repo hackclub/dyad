@@ -36,6 +36,13 @@
             been previously approved by another Hack Club YSWS program.
         </p>
         <p class="description-text">
+            Some programs may claim a part of your project ahead of time. Dyad
+            cannot accept that previously claimed time, but can accept time over
+            and above. For instance, you may not be able to submit Third Space
+            projects from past weeks. Still a chance though, and you'll be let
+            know if you need to log more time.
+        </p>
+        <p class="description-text">
             Though I guess one more thing: if another YSWS program rejected your
             project because you tried to cheat the time tracking systems, please
             don't submit here. You won't get any prizes and it's just more work
