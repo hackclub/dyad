@@ -217,14 +217,12 @@
         editing_id = null;
         partner_invite = partner;
         dialog_open = true;
-        refresh();
     }
 
     function edit_project(project: ProjectInfo) {
         dialog_mode = "edit";
         editing_id = project.project_id;
         dialog_open = true;
-        refresh();
     }
 
     function on_saved(invite_token: string | null) {
@@ -260,6 +258,7 @@
     mode={dialog_mode}
     existing={editing}
     {partner_invite}
+    onopen={refresh}
     onsaved={on_saved}
     onfailed={refresh}
 />

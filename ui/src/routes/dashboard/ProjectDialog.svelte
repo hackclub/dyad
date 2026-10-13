@@ -37,6 +37,7 @@
         mode?: Mode;
         existing?: ProjectInfo | null;
         partner_invite?: PartnerInvite | null;
+        onopen?: () => Promise<void>;
         onsaved?: (invite_token: string | null) => void;
         onfailed?: () => void;
     }
@@ -46,6 +47,7 @@
         mode = "add",
         existing = null,
         partner_invite = null,
+        onopen,
         onsaved,
         onfailed,
     }: Props = $props();
@@ -150,6 +152,7 @@
     );
     let error = $state("");
     let saving = $state(false);
+    let loading = $state(false);
     let games_open = $state(false);
 
     let dialog: HTMLDialogElement;
@@ -162,17 +165,25 @@
     const reduced_motion = () =>
         matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    function reset() {
-        generation++;
-        saving = false;
+    function fill() {
         project_id = existing?.project_id ?? null;
         project = details_of(existing);
-        friend_code = "";
         games = [...(existing?.games ?? [])];
         first_time = existing?.me.first_time ?? false;
         selected_hackatime = [
             ...new Set(existing?.hackatime_project_names ?? []),
         ];
+    }
+
+    function reset() {
+        generation++;
+        saving = false;
+        project_id = null;
+        project = details_of(null);
+        friend_code = "";
+        games = [];
+        first_time = false;
+        selected_hackatime = [];
         hackatime_filter = "";
         hackatime_projects = [];
         hackatime_loaded = false;
@@ -240,8 +251,22 @@
         if (checked) selected_hackatime.push(name);
     }
 
+    async function start() {
+        const gen = generation;
+        loading = true;
+        try {
+            await onopen?.();
+        } finally {
+            if (gen === generation) {
+                loading = false;
+                fill();
+                if (mode === "edit") load_options();
+            }
+        }
+    }
+
     $effect(() => {
-        if (!details_locked || !existing) return;
+        if (!details_locked || !existing || loading) return;
         const locked = existing;
         untrack(() => {
             project = details_of(locked);
@@ -254,7 +279,7 @@
         if (open && !dialog.open) {
             untrack(() => {
                 reset();
-                if (mode === "edit") load_options();
+                start();
             });
             dialog.showModal();
             slide("in");
@@ -346,15 +371,16 @@
                             bind:value={project[field.key]}
                             maxlength={field.max}
                             rows="4"
-                            disabled={details_locked}
+                            placeholder={loading ? "Loading..." : undefined}
+                            disabled={details_locked || loading}
                         ></textarea>
                     {:else if field.kind === "url"}
                         <input
                             type="url"
                             bind:value={project[field.key]}
                             maxlength={field.max}
-                            placeholder="https://"
-                            disabled={details_locked}
+                            placeholder={loading ? "Loading..." : "https://"}
+                            disabled={details_locked || loading}
                         />
                     {:else}
                         <input
@@ -362,7 +388,8 @@
                             bind:value={project[field.key]}
                             maxlength={field.max}
                             required={field.required}
-                            disabled={details_locked}
+                            placeholder={loading ? "Loading..." : undefined}
+                            disabled={details_locked || loading}
                         />
                     {/if}
                 </label>
@@ -405,11 +432,15 @@
                         class="games-trigger"
                         class:active={games_open}
                         aria-expanded={games_open}
-                        disabled={details_locked}
+                        disabled={details_locked || loading}
                         onclick={() => (games_open = !games_open)}
                     >
                         <span class="games-trigger-text">
-                            {games.length ? games.join(", ") : "Pick games"}
+                            {loading
+                                ? "Loading..."
+                                : games.length
+                                  ? games.join(", ")
+                                  : "Pick games"}
                         </span>
                         <span class="trigger-icon"
                             >{games_open ? "−" : "+"}</span
@@ -503,7 +534,11 @@
             {/if}
 
             <label class="check">
-                <input type="checkbox" bind:checked={first_time} />
+                <input
+                    type="checkbox"
+                    bind:checked={first_time}
+                    disabled={loading}
+                />
                 This is my first time coding or doing a Hack Club YSWS
             </label>
 
@@ -517,7 +552,10 @@
                     class="cancel-button"
                     onclick={() => (open = false)}>Cancel</button
                 >
-                <button type="submit" class="confirm-button" disabled={saving}
+                <button
+                    type="submit"
+                    class="confirm-button"
+                    disabled={saving || loading}
                     >{HEADINGS[mode].confirm}</button
                 >
             </div>
