@@ -249,7 +249,9 @@ async fn send_back(
                 "A reviewer sent back {names}'s submission for {project} on Dyad. They'll need to press Ready to ship again."
             )
         };
-        slack::dm(&hacker.slack_id, message);
+        if !hacker.dms_opt_out {
+            slack::dm(&hacker.slack_id, message);
+        }
     }
     Ok(())
 }
@@ -276,7 +278,9 @@ async fn update(project_id: i32, combined: Review, pool: &Pool<Postgres>) -> any
         _ => return Ok(()),
     };
     for hacker in requests::get_project_members(project_id, pool).await? {
-        slack::dm(&hacker.slack_id, message.clone());
+        if !hacker.dms_opt_out {
+            slack::dm(&hacker.slack_id, message.clone());
+        }
     }
     Ok(())
 }

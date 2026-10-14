@@ -212,6 +212,17 @@
         }
     }
 
+    async function set_dms(box: HTMLInputElement) {
+        const enabled = box.checked;
+        try {
+            await api("/dashboard/dms", { enabled });
+            if (me) me.dms = enabled;
+        } catch (e) {
+            box.checked = !enabled;
+            error = (e as Error).message;
+        }
+    }
+
     function new_project(partner: PartnerInvite | null = null) {
         dialog_mode = "add";
         editing_id = null;
@@ -271,6 +282,7 @@
                 <input
                     type="checkbox"
                     checked={me.reminders}
+                    disabled={!me.dms}
                     onchange={(e) => set_reminders(e.currentTarget)}
                 />
                 Slack me if I haven't worked on a project for a while
@@ -296,6 +308,14 @@
                     >{regenerated ? "New link ready!" : "New invite link"}</button
                 >
             </p>
+            <label class="friend-code reminders">
+                <input
+                    type="checkbox"
+                    checked={me.dms}
+                    onchange={(e) => set_dms(e.currentTarget)}
+                />
+                Slack me about important milestones with my projects
+            </label>
         </div>
     {/if}
     {#if loaded && linked}

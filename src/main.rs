@@ -10,7 +10,7 @@ use crate::{
     dashboard::{
         cancel_join, delete_project, get_games, get_invite, get_me, get_project_card_data,
         get_projects_list, invite_link, join_project, regenerate_invite, respond_invite,
-        respond_join, serve_dashboard, set_reminders, ship_project, unready, upsert_project,
+        respond_join, serve_dashboard, set_dms, set_reminders, ship_project, unready, upsert_project,
     },
     login::{
         callback_handler, hackatime_callback_handler, hackatime_login_handler, login_handler,
@@ -85,6 +85,7 @@ async fn main() -> std::io::Result<()> {
             .service(regenerate_invite)
             .service(unready)
             .service(set_reminders)
+            .service(set_dms)
             .service(invite_link)
             .service(serve_stats)
             .service(get_stats)

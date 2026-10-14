@@ -14,6 +14,7 @@ pub struct DBHacker {
     pub slack_id: Option<String>,
     pub friend_code: Option<i32>,
     pub reminders_opt_out: Option<bool>,
+    pub dms_opt_out: Option<bool>,
     pub invite_token: Option<String>,
     pub hackatime_user_id: Option<i64>,
 }
@@ -63,6 +64,7 @@ pub struct HackerParsed {
     pub slack_id: String,
     pub friend_code: i32,
     pub reminders_opt_out: bool,
+    pub dms_opt_out: bool,
     pub invite_token: String,
 }
 
@@ -84,6 +86,7 @@ impl Into<HackerParsed> for DBHacker {
             slack_id: self.slack_id.unwrap_or_default(),
             friend_code: self.friend_code.unwrap_or_default(),
             reminders_opt_out: self.reminders_opt_out.unwrap_or_default(),
+            dms_opt_out: self.dms_opt_out.unwrap_or_default(),
             invite_token: self.invite_token.unwrap_or_default(),
         }
     }
@@ -173,6 +176,7 @@ pub struct ClientMe {
     pub ysws_eligible: bool,
     pub verification_status: String,
     pub reminders: bool,
+    pub dms: bool,
 }
 
 #[derive(serde::Serialize)]

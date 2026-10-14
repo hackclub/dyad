@@ -172,6 +172,7 @@ pub async fn get_me(
         ysws_eligible: auth_data.ysws_eligible,
         verification_status: auth_data.verification_status,
         reminders: !hacker.reminders_opt_out,
+        dms: !hacker.dms_opt_out,
     }))
 }
 
@@ -457,7 +458,7 @@ fn too_many_invites() -> ApiError {
 }
 
 async fn dm_limited(pool: &Pool<Postgres>, sender: i32, recipient: &HackerParsed, text: String) {
-    if !slack::enabled() || recipient.slack_id.is_empty() {
+    if !slack::enabled() || recipient.slack_id.is_empty() || recipient.dms_opt_out {
         return;
     }
     match requests::allow_dm(sender, recipient.user_id, pool).await {
@@ -904,6 +905,17 @@ pub async fn set_reminders(
 ) -> Result<HttpResponse, ApiError> {
     let (hacker, _) = current_hacker(&req, &pool).await?;
     requests::set_reminders_opt_out(hacker.user_id, !body.enabled, &pool).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[actix_web::post("/dashboard/dms")]
+pub async fn set_dms(
+    req: HttpRequest,
+    pool: web::Data<Pool<Postgres>>,
+    body: web::Json<RemindersRequest>,
+) -> Result<HttpResponse, ApiError> {
+    let (hacker, _) = current_hacker(&req, &pool).await?;
+    requests::set_dms_opt_out(hacker.user_id, !body.enabled, &pool).await?;
     Ok(HttpResponse::Ok().finish())
 }
 

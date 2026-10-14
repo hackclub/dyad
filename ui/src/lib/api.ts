@@ -6,6 +6,7 @@ export interface Me {
   ysws_eligible: boolean;
   verification_status: string;
   reminders: boolean;
+  dms: boolean;
 }
 
 export type HackatimeStatus = "ok" | "unlinked" | "expired" | "unreachable";

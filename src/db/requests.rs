@@ -951,7 +951,7 @@ pub async fn get_activity_rows(pool: &Pool<Postgres>) -> anyhow::Result<Vec<Acti
         FROM user_project up
         JOIN project p USING (project_id)
         JOIN hacker h USING (user_id)
-        WHERE up.confirmed_at IS NOT NULL AND up.ship_ok_at IS NULL AND p.shipped_at IS NULL AND NOT h.reminders_opt_out
+        WHERE up.confirmed_at IS NOT NULL AND up.ship_ok_at IS NULL AND p.shipped_at IS NULL AND NOT h.reminders_opt_out AND NOT h.dms_opt_out
             AND p.user2 IS NOT NULL
             AND NOT EXISTS (SELECT 1 FROM user_project o WHERE o.project_id = up.project_id AND o.confirmed_at IS NULL)
             AND h.hackatime_user_id IS NOT NULL
@@ -990,6 +990,19 @@ pub async fn set_reminders_opt_out(
     pool: &Pool<Postgres>,
 ) -> anyhow::Result<()> {
     sqlx::query("UPDATE hacker SET reminders_opt_out = $1 WHERE user_id = $2")
+        .bind(opt_out)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn set_dms_opt_out(
+    user_id: i32,
+    opt_out: bool,
+    pool: &Pool<Postgres>,
+) -> anyhow::Result<()> {
+    sqlx::query("UPDATE hacker SET dms_opt_out = $1 WHERE user_id = $2")
         .bind(opt_out)
         .bind(user_id)
         .execute(pool)
