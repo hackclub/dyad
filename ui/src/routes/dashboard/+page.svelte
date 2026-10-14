@@ -4,6 +4,7 @@
     import ProjectEntry from "./ProjectEntry.svelte";
     import ProjectDialog from "./ProjectDialog.svelte";
     import DashboardLines from "./DashboardLines.svelte";
+    import HelpDialog from "./HelpDialog.svelte";
     import { onMount } from "svelte";
     import {
         api,
@@ -26,6 +27,7 @@
     let error = $state("");
     let link_error = $state("");
     let dialog_open = $state(false);
+    let help_open = $state(false);
     let dialog_mode = $state<"add" | "edit">("add");
     let editing_id = $state<number | null>(null);
     let editing = $derived(
@@ -66,6 +68,7 @@
     );
 
     let refresh_seq = 0;
+    let refresh_failed = $state(false);
 
     async function refresh() {
         const seq = ++refresh_seq;
@@ -79,8 +82,11 @@
             last_refresh = Date.now();
             now = last_refresh;
             error = "";
+            refresh_failed = false;
         } catch (e) {
-            if (seq === refresh_seq) error = (e as Error).message;
+            if (seq !== refresh_seq) return;
+            error = (e as Error).message;
+            refresh_failed = true;
         }
     }
 
@@ -122,14 +128,17 @@
         }
     }
 
+    $effect(() => {
+        const auto = setInterval(refresh, refresh_failed ? 3_000 : 30_000);
+        return () => clearInterval(auto);
+    });
+
     onMount(() => {
         const tick = setInterval(() => (now = Date.now()), 1000);
-        const auto = setInterval(refresh, 30_000);
         read_link_error();
         refresh().then(check_invite);
         return () => {
             clearInterval(tick);
-            clearInterval(auto);
         };
     });
 
@@ -274,10 +283,20 @@
     onfailed={refresh}
 />
 
+<HelpDialog bind:open={help_open} />
+
 <div class="top-bar">
     <div class="container">
         <h1>Dyad Dashboard</h1>
         {#if me}
+            <label class="friend-code reminders">
+                <input
+                    type="checkbox"
+                    checked={me.dms}
+                    onchange={(e) => set_dms(e.currentTarget)}
+                />
+                Slack me about important milestones with my projects
+            </label>
             <label class="friend-code reminders">
                 <input
                     type="checkbox"
@@ -308,14 +327,6 @@
                     >{regenerated ? "New link ready!" : "New invite link"}</button
                 >
             </p>
-            <label class="friend-code reminders">
-                <input
-                    type="checkbox"
-                    checked={me.dms}
-                    onchange={(e) => set_dms(e.currentTarget)}
-                />
-                Slack me about important milestones with my projects
-            </label>
         </div>
     {/if}
     {#if loaded && linked}
@@ -448,6 +459,10 @@
     {/if}
 </div>
 
+<button class="help-button container" onclick={() => (help_open = true)}
+    >Help</button
+>
+
 <style>
     :root {
         margin-left: 10vw;
@@ -486,6 +501,21 @@
         transition: background-color 0.3s ease;
     }
     .new-project-button:hover {
+        background-color: var(--accent-primary);
+        color: var(--text-on-accent);
+    }
+    .help-button {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        padding: 8px 20px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .help-button:hover {
         background-color: var(--accent-primary);
         color: var(--text-on-accent);
     }
