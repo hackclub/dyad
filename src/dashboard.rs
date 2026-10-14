@@ -158,6 +158,16 @@ pub async fn serve_dashboard(req: HttpRequest, pool: web::Data<Pool<Postgres>>) 
     }
 }
 
+#[actix_web::get("/games")]
+pub async fn serve_games() -> HttpResponse {
+    match std::fs::read_to_string("./ui/build/games.html") {
+        Ok(body) => HttpResponse::Ok()
+            .content_type("text/html; charset=utf-8")
+            .body(body),
+        Err(_) => HttpResponse::NotFound().finish(),
+    }
+}
+
 #[actix_web::get("/dashboard/me")]
 pub async fn get_me(
     req: HttpRequest,

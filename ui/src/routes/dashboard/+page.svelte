@@ -329,6 +329,7 @@
             </p>
         </div>
     {/if}
+    <a class="new-project-button container" href="/games"><h1>Games list</h1></a>
     {#if loaded && linked}
         <button
             class="new-project-button container"
@@ -501,7 +502,10 @@
         text-align: center;
     }
     .new-project-button {
+        display: flex;
+        align-items: center;
         color: var(--text-primary);
+        text-decoration: none;
         transition: background-color 0.3s ease;
     }
     .new-project-button:hover {
