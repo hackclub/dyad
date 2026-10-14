@@ -152,6 +152,12 @@
       "steam_app_id": 892970,
       "price_cents": 2999,
       "copies": 2
+    },
+    {
+      "name": "Minecraft",
+      "price_cents": 2999,
+      "copies": 2,
+      "image_url": "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Hero-Image_Vanilla_Standard_1200x675.jpg"
     }
   ]
 }

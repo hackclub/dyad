@@ -18,7 +18,7 @@ struct CreditTier {
 #[derive(Deserialize)]
 pub struct Game {
     pub name: String,
-    steam_app_id: u32,
+    steam_app_id: Option<u32>,
     price_cents: u32,
     copies: u32,
     #[serde(default)]
@@ -60,12 +60,33 @@ impl Game {
     }
 
     pub fn image_url(&self) -> String {
-        if let Some(url) = &self.image_url {
-            return url.clone();
+        match (&self.image_url, self.steam_app_id) {
+            (Some(url), _) => url.clone(),
+            (None, Some(id)) => format!(
+                "https://shared.steamstatic.com/store_item_assets/steam/apps/{id}/header.jpg"
+            ),
+            (None, None) => panic!("{} has neither a Steam app ID nor an image URL", self.name),
         }
-        format!(
-            "https://shared.steamstatic.com/store_item_assets/steam/apps/{}/header.jpg",
-            self.steam_app_id
-        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CATALOG;
+
+    #[test]
+    fn every_game_has_an_image_and_a_tier() {
+        for game in &CATALOG.games {
+            assert!(game.image_url().starts_with("https://"), "{}", game.name);
+            CATALOG.credits_for(game);
+        }
+    }
+
+    #[test]
+    fn minecraft_is_listed() {
+        let game = CATALOG.find("Minecraft").unwrap();
+        assert_eq!(CATALOG.credits_for(game), 2);
+        assert_eq!(game.copies_label(), "2 copies");
+        assert!(game.image_url().contains("minecraft.net"));
     }
 }

@@ -449,6 +449,10 @@
                 No projects yet. Add one with your partner's friend code, or add
                 one on your own and send them your invite link.
             </p>
+            <p class="empty">
+                Click into the "Edit" button after creating a project to see the
+                games catalog!
+            </p>
         {/each}
     {:else if loaded}
         <div class="link-hackatime-button-container">
