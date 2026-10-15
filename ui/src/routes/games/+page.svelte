@@ -26,7 +26,7 @@
     <header class="card">
         <h1>Dyad Games</h1>
         <p>
-            Once you and your partner ship a project, that <strong>project</strong>
+            Once you and your partner ship a project, that <i>project</i>
             gets 2 credits to spend on games. Each game's price already covers
             both of you, either as two copies or as one copy plus a friend pass.
             So a 1 credit game costs 1 credit for the pair and a 2 credit game
