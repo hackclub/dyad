@@ -969,6 +969,34 @@ pub async fn get_activity_rows(pool: &Pool<Postgres>) -> anyhow::Result<Vec<Acti
         .collect())
 }
 
+#[derive(sqlx::FromRow)]
+pub struct LinkedRow {
+    pub user_id: i32,
+    pub join_at: Option<NaiveDateTime>,
+    pub hackatime_token: String,
+    pub hackatime_project_names: Vec<String>,
+}
+
+pub async fn get_linked_rows(pool: &Pool<Postgres>) -> anyhow::Result<Vec<LinkedRow>> {
+    let rows: Vec<LinkedRow> = sqlx::query_as(
+        "SELECT up.user_id, h.join_at, h.hackatime_token, up.hackatime_project_names
+        FROM user_project up
+        JOIN hacker h USING (user_id)
+        WHERE cardinality(up.hackatime_project_names) > 0
+            AND h.hackatime_token IS NOT NULL AND h.hackatime_token <> ''",
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| LinkedRow {
+            hackatime_token: crypto::decrypt_or_empty(row.user_id, Some(row.hackatime_token)),
+            ..row
+        })
+        .filter(|row| !row.hackatime_token.is_empty())
+        .collect())
+}
+
 pub async fn set_nudged(
     project_id: i32,
     user_id: i32,
