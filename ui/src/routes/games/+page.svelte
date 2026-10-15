@@ -26,9 +26,14 @@
     <header class="card">
         <h1>Dyad Games</h1>
         <p>
-            Ship a project with a friend and pick from these two player games
-            for the two of you to play. <a href="/">Back to Dyad</a>
+            Once you and your partner ship a project, that <strong>project</strong>
+            gets 2 credits to spend on games. Each game's price already covers
+            both of you, either as two copies or as one copy plus a friend pass.
+            So a 1 credit game costs 1 credit for the pair and a 2 credit game
+            costs 2 credits for the pair. Spend your 2 credits on one 2 credit
+            game or two 1 credit games.
         </p>
+        <p><a href="/">Back to Dyad</a></p>
     </header>
 
     {#if catalog}
@@ -37,6 +42,10 @@
                 <div class="tile">
                     <p class="tile-name">{game.name}</p>
                     <img src={game.image_url} alt={game.name} loading="lazy" />
+                    <p class="cost">
+                        {game.credits} credit{game.credits === 1 ? "" : "s"}
+                        <span class="copies">({game.copies_label})</span>
+                    </p>
                 </div>
             {/each}
         </div>
@@ -78,6 +87,20 @@
     header p {
         margin: 0.5rem 0 0;
         color: var(--text-secondary);
+    }
+
+    header strong {
+        color: var(--text-primary);
+    }
+
+    .cost {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .copies {
+        opacity: 0.8;
     }
 
     header a {
