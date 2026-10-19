@@ -190,7 +190,7 @@ pub async fn get_me(
 pub async fn get_games() -> HttpResponse {
     let catalog = &*games::CATALOG;
     HttpResponse::Ok().json(ClientCatalog {
-        credit_budget: catalog.credit_budget,
+        credits_per_block: catalog.credits_per_block,
         games: catalog
             .games
             .iter()
@@ -238,6 +238,7 @@ pub async fn get_project_card_data(
     pool: web::Data<Pool<Postgres>>,
 ) -> Result<HttpResponse, ApiError> {
     let (hacker, _) = current_hacker(&req, &pool).await?;
+    let catalog = &*games::CATALOG;
     let projects = requests::get_projects_for_user(hacker.user_id, &pool).await?;
     let project_ids: Vec<i32> = projects.iter().map(|p| p.project_id).collect();
     let user_projects = requests::get_user_projects(&project_ids, &pool).await?;
@@ -304,6 +305,8 @@ pub async fn get_project_card_data(
             name: h.first_name.clone(),
             hours_logged,
             hours_needed: up.hours_needed,
+            hours_target: up.hours_needed,
+            next_credits_at: up.hours_needed,
             first_time: up.first_time,
             confirmed: up.confirmed_at.is_some(),
             ready_to_ship: up.ship_ok_at.is_some(),
@@ -318,9 +321,24 @@ pub async fn get_project_card_data(
             continue;
         };
         let shipped = p.shipped_at.is_some();
-        let friend = friend_id(&p, hacker.user_id)
+        let mut friend = friend_id(&p, hacker.user_id)
             .and_then(|id| Some((friends.get(&id)?, user_project(p.project_id, id)?)))
             .map(|(h, up)| member(h, up, shipped));
+        let mut me = member(&hacker, mine, shipped);
+        let credits_spent = catalog.cost(&p.games);
+        let blocks = match &friend {
+            Some(f) if me.confirmed && f.confirmed => match (me.hours_logged, f.hours_logged) {
+                (Some(mine), Some(theirs)) => games::blocks_earned(mine, me.hours_needed)
+                    .min(games::blocks_earned(theirs, f.hours_needed)),
+                _ => 0,
+            },
+            _ => 0,
+        };
+        let blocks_needed = catalog.blocks_needed(credits_spent);
+        for m in std::iter::once(&mut me).chain(friend.as_mut()) {
+            m.hours_target = m.hours_needed * blocks_needed as f32;
+            m.next_credits_at = m.hours_needed * (blocks + 1) as f32;
+        }
         out.push(ClientProjectInfo {
             project_id: p.project_id,
             name: p.name,
@@ -332,7 +350,11 @@ pub async fn get_project_card_data(
             shipped,
             review_status: p.review_status,
             hackatime_project_names: mine.hackatime_project_names.clone(),
-            me: member(&hacker, mine, shipped),
+            credit_budget: catalog.budget(blocks).max(credits_spent),
+            credits_earned: catalog.credits_per_block * blocks,
+            credits_spent,
+            credits_per_block: catalog.credits_per_block,
+            me,
             friend,
             join_requests: incoming.remove(&p.project_id).unwrap_or_default(),
         })
@@ -417,19 +439,55 @@ fn validate_fields(
     {
         return Err(ApiError::BadRequest(format!("Unknown game \"{unknown}\"")));
     }
-    let credits: u8 = fields
-        .games
-        .iter()
-        .filter_map(|n| catalog.find(n))
-        .map(|g| catalog.credits_for(g))
-        .sum();
-    if credits > catalog.credit_budget {
-        return Err(ApiError::BadRequest(format!(
-            "Those games cost {credits} credits, but you only have {}",
-            catalog.credit_budget
-        )));
-    }
     Ok(fields)
+}
+
+fn over_budget(cost: u32, budget: u32) -> ApiError {
+    let catalog = &*games::CATALOG;
+    ApiError::BadRequest(format!(
+        "Those games cost {cost} credits, but you can only pick {budget} right now. You earn {} more for every 5h you each log (3h if it's your first time).",
+        catalog.credits_per_block
+    ))
+}
+
+fn partner_hackatime_error(name: &str, status: HackatimeStatus) -> ApiError {
+    match status {
+        HackatimeStatus::Unlinked => {
+            ApiError::BadRequest(format!("{name} needs to link Hackatime first"))
+        }
+        HackatimeStatus::Expired => ApiError::BadRequest(format!(
+            "{name}'s Hackatime connection stopped working. They need to relink it from their dashboard."
+        )),
+        HackatimeStatus::Ok | HackatimeStatus::Unreachable => {
+            ApiError::BadGateway("Couldn't reach Hackatime. Try again in a bit.".into())
+        }
+    }
+}
+
+async fn blocks_earned(m: &Membership, hacker: &HackerParsed) -> Result<u32, ApiError> {
+    let Some(friend) = m.friend.as_ref() else {
+        return Ok(0);
+    };
+    if m.mine.confirmed_at.is_none() || friend.user_project.confirmed_at.is_none() {
+        return Ok(0);
+    }
+    let summaries = get_summaries_for([
+        hacker.hackatime_token.clone(),
+        friend.hacker.hackatime_token.clone(),
+    ])
+    .await;
+    let hours = |h: &HackerParsed, up: &UserProjectParsed| match summaries.get(&h.hackatime_token) {
+        Some(Ok(projects)) => Ok(games::blocks_earned(
+            hours_in(projects, &up.hackatime_project_names),
+            up.hours_needed,
+        )),
+        Some(Err(status)) => Err(*status),
+        None => Err(token_status(h)),
+    };
+    let mine = hours(hacker, &m.mine).map_err(HackatimeStatus::my_error)?;
+    let theirs = hours(&friend.hacker, &friend.user_project)
+        .map_err(|s| partner_hackatime_error(&friend.hacker.first_name, s))?;
+    Ok(mine.min(theirs))
 }
 
 async fn validate_hackatime_names(
@@ -509,6 +567,14 @@ pub async fn upsert_project(
             }
 
             let fields = validate_fields(&body, &m.project.games)?;
+            let catalog = &*games::CATALOG;
+            let cost = catalog.cost(&fields.games);
+            if cost > catalog.budget(0) && cost > catalog.cost(&m.project.games) {
+                let budget = catalog.budget(blocks_earned(&m, &hacker).await?);
+                if cost > budget {
+                    return Err(over_budget(cost, budget));
+                }
+            }
             let project_fields_changed = fields.name != m.project.name
                 || fields.description != m.project.description
                 || fields.screenshot_url != m.project.screenshot_url
@@ -564,6 +630,11 @@ pub async fn upsert_project(
         }
         None => {
             let fields = validate_fields(&body, &[])?;
+            let catalog = &*games::CATALOG;
+            let cost = catalog.cost(&fields.games);
+            if cost > catalog.budget(0) {
+                return Err(over_budget(cost, catalog.budget(0)));
+            }
             let friend = match (&body.invite_token, body.friend_code) {
                 (Some(invite_token), _) => Some(invite_sender(invite_token, &hacker, &pool).await?),
                 (None, Some(friend_code)) => {
@@ -1168,10 +1239,17 @@ async fn check_ready(
         }
     }
     let hours = hours_in(&projects, &m.mine.hackatime_project_names);
-    if hours < m.mine.hours_needed {
+    let catalog = &*games::CATALOG;
+    let cost = catalog.cost(&p.games);
+    let target = m.mine.hours_needed * catalog.blocks_needed(cost) as f32;
+    if hours < target {
+        let reason = if target > m.mine.hours_needed {
+            format!(" (your games cost {cost} credits)")
+        } else {
+            String::new()
+        };
         return Err(ApiError::BadRequest(format!(
-            "You've logged {hours}h of your {}h target",
-            m.mine.hours_needed
+            "You've logged {hours}h of your {target}h target{reason}"
         )));
     }
     Ok((m, hours))

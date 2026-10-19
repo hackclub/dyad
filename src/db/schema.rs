@@ -185,6 +185,8 @@ pub struct ClientMemberInfo {
     pub name: String,
     pub hours_logged: Option<f32>,
     pub hours_needed: f32,
+    pub hours_target: f32,
+    pub next_credits_at: f32,
     pub first_time: bool,
     pub confirmed: bool,
     pub ready_to_ship: bool,
@@ -204,6 +206,10 @@ pub struct ClientProjectInfo {
     pub shipped: bool,
     pub review_status: Option<String>,
     pub hackatime_project_names: Vec<String>,
+    pub credit_budget: u32,
+    pub credits_earned: u32,
+    pub credits_spent: u32,
+    pub credits_per_block: u32,
     pub me: ClientMemberInfo,
     pub friend: Option<ClientMemberInfo>,
     pub join_requests: Vec<ClientJoinRequest>,
@@ -245,6 +251,6 @@ pub struct ClientGame {
 
 #[derive(serde::Serialize)]
 pub struct ClientCatalog {
-    pub credit_budget: u8,
+    pub credits_per_block: u32,
     pub games: Vec<ClientGame>,
 }

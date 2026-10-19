@@ -86,8 +86,8 @@
                 : project.me.hours_logged === null
                   ? HACKATIME_PROBLEM[project.me.hackatime] ||
                     "Couldn't reach Hackatime"
-                  : project.me.hours_logged < project.me.hours_needed
-                    ? `You've logged ${project.me.hours_logged}h of your ${project.me.hours_needed}h target`
+                  : project.me.hours_logged < project.me.hours_target
+                    ? `You've logged ${project.me.hours_logged}h of your ${project.me.hours_target}h target`
                     : "",
     );
 
@@ -112,12 +112,21 @@
             <p class="hours">
                 {label}:
                 {#if m.hours_logged !== null}
-                    {m.hours_logged} / {m.hours_needed}h
+                    {m.hours_logged} / {m.hours_target}h
                 {:else}
-                    {HACKATIME_PROBLEM[m.hackatime] || `- / ${m.hours_needed}h`}
+                    {HACKATIME_PROBLEM[m.hackatime] || `- / ${m.hours_target}h`}
                 {/if}
             </p>
         {/each}
+        {#if !project.shipped}
+            <p class="credits">
+                {project.credits_earned} credit{project.credits_earned === 1
+                    ? ""
+                    : "s"} earned. Your pair gets {project.credits_per_block} more credits
+                at {project.me.next_credits_at}h for you and {project.friend
+                    .next_credits_at}h for {project.friend.name}
+            </p>
+        {/if}
     {/if}
 
     {#if !project.friend && project.join_requests.length}
@@ -220,6 +229,9 @@
     }
     .hours {
         color: var(--text-primary);
+    }
+    .credits {
+        color: var(--text-secondary);
     }
     .requests {
         display: flex;

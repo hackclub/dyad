@@ -16,6 +16,8 @@ export interface Member {
   name: string;
   hours_logged: number | null;
   hours_needed: number;
+  hours_target: number;
+  next_credits_at: number;
   first_time: boolean;
   confirmed: boolean;
   ready_to_ship: boolean;
@@ -45,6 +47,10 @@ export interface ProjectInfo {
   shipped: boolean;
   review_status: "pending" | "processing" | "approved" | "error" | null;
   hackatime_project_names: string[];
+  credit_budget: number;
+  credits_earned: number;
+  credits_spent: number;
+  credits_per_block: number;
   me: Member;
   friend: Member | null;
   join_requests: JoinRequest[];
@@ -83,7 +89,7 @@ export interface Game {
 }
 
 export interface GameCatalog {
-  credit_budget: number;
+  credits_per_block: number;
   games: Game[];
 }
 

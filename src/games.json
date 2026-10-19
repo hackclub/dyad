@@ -1,5 +1,5 @@
 {
-  "credit_budget": 2,
+  "credits_per_block": 2,
   "credit_tiers": [
     { "under_cents": 2500, "credits": 1 },
     { "under_cents": null, "credits": 2 }

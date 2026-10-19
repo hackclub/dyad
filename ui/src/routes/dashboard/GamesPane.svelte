@@ -5,18 +5,19 @@
 
     interface Props {
         catalog: GameCatalog;
+        budget: number;
         selected?: string[];
         ondone: () => void;
     }
 
-    let { catalog, selected = $bindable([]), ondone }: Props = $props();
+    let { catalog, budget, selected = $bindable([]), ondone }: Props = $props();
 
     let spent = $derived(
         catalog.games
             .filter((g) => selected.includes(g.name))
             .reduce((sum, g) => sum + g.credits, 0),
     );
-    let left = $derived(catalog.credit_budget - spent);
+    let left = $derived(budget - spent);
     let retired = $derived(
         catalog.games.length
             ? [
@@ -39,16 +40,21 @@
 <div class="games-pane">
     <div class="pane-header">
         <div class="credit-bar">
-            {#each Array(catalog.credit_budget) as _, i (i)}
+            {#each Array(budget) as _, i (i)}
                 <span class="segment" class:filled={i < left}></span>
             {/each}
         </div>
         <div class="header-row">
             <p class="credits-left">
-                {left}/{catalog.credit_budget} Credits Left
+                {left}/{budget} Credits Left
             </p>
             <button type="button" class="done" onclick={ondone}>Done</button>
         </div>
+        <p class="earn-hint">
+            Your first {catalog.credits_per_block} credits unlock when you each hit
+            your hour target. Every extra 5h you each log (3h if it's your first
+            time) adds {catalog.credits_per_block} more.
+        </p>
     </div>
 
     <div class="grid themed-scroll">
@@ -137,6 +143,11 @@
         color: var(--text-primary);
         font-size: 1.5rem;
         font-weight: bold;
+    }
+    .earn-hint {
+        margin: 8px 0 0;
+        color: var(--text-secondary);
+        text-align: center;
     }
     .done {
         grid-column: 3;

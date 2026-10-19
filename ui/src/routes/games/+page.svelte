@@ -26,12 +26,13 @@
     <header class="card">
         <h1>Dyad Games</h1>
         <p>
-            Once you and your partner ship a project, that <i>project</i>
-            gets 2 credits to spend on games. Each game's price already covers
-            both of you, either as two copies or as one copy plus a friend pass.
-            So a 1 credit game costs 1 credit for the pair and a 2 credit game
-            costs 2 credits for the pair. Spend your 2 credits on one 2 credit
-            game or two 1 credit games.
+            Your <i>project</i> earns 2 credits to spend on games for every 5
+            hours you and your partner each log on it (3 hours if it's your
+            first time). So 10 hours each gets you 4 credits, 15 hours each
+            gets you 6, and so on. Each game's price already covers both of
+            you, either as two copies or as one copy plus a friend pass. So a 1
+            credit game costs 1 credit for the pair and a 2 credit game costs 2
+            credits for the pair.
         </p>
         <p><a href="/">Back to Dyad</a></p>
     </header>

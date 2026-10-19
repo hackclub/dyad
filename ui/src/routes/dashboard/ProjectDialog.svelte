@@ -128,7 +128,7 @@
     let games = $state<string[]>([]);
     let first_time = $state(false);
     let selected_hackatime = $state<string[]>([]);
-    let catalog = $state<GameCatalog>({ credit_budget: 0, games: [] });
+    let catalog = $state<GameCatalog>({ credits_per_block: 0, games: [] });
     let hackatime_projects = $state<HackatimeProject[]>([]);
     let hackatime_loaded = $state(false);
     let hackatime_error = $state("");
@@ -424,7 +424,8 @@
                     <span class="field-name">Games</span>
                     <span class="field-helper"
                         >The two-player games you'd like, paid for with your
-                        credits.</span
+                        credits. You get more credits the longer you both
+                        work.</span
                     >
                     <button
                         type="button"
@@ -566,6 +567,7 @@
         <div class="games-slot" transition:flow_out>
             <GamesPane
                 {catalog}
+                budget={existing?.credit_budget ?? catalog.credits_per_block}
                 bind:selected={games}
                 ondone={() => (games_open = false)}
             />

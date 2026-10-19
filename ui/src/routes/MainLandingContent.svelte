@@ -50,6 +50,9 @@
             Hack Club YSWS program for one of you, that person only has to do
             three (3) hours. Other person still has to do the full five, though.
             Make sure you sync Lapse with Hackatime if you're going to use it!
+            Hitting your targets gets your project 2 credits to spend on games,
+            and every extra 5 hours you each log (3 for first timers) gets you
+            2 more.
         </p>
     </div>
     <div class="description-entry">

@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Catalog {
-    pub credit_budget: u8,
+    pub credits_per_block: u32,
     credit_tiers: Vec<CreditTier>,
     pub games: Vec<Game>,
 }
@@ -48,6 +48,29 @@ impl Catalog {
             .unwrap_or_else(|| panic!("No credit tier covers {}", game.name))
             .credits
     }
+
+    pub fn cost(&self, names: &[String]) -> u32 {
+        names
+            .iter()
+            .filter_map(|n| self.find(n))
+            .map(|g| u32::from(self.credits_for(g)))
+            .sum()
+    }
+
+    pub fn budget(&self, blocks: u32) -> u32 {
+        self.credits_per_block * blocks.max(1)
+    }
+
+    pub fn blocks_needed(&self, cost: u32) -> u32 {
+        cost.div_ceil(self.credits_per_block).max(1)
+    }
+}
+
+pub fn blocks_earned(hours: f32, hours_needed: f32) -> u32 {
+    if hours_needed <= 0.0 {
+        return 0;
+    }
+    (hours / hours_needed).floor() as u32
 }
 
 impl Game {
@@ -72,7 +95,23 @@ impl Game {
 
 #[cfg(test)]
 mod tests {
-    use super::CATALOG;
+    use super::{CATALOG, blocks_earned};
+
+    #[test]
+    fn credits_scale_with_hours() {
+        assert_eq!(blocks_earned(0.0, 5.0), 0);
+        assert_eq!(blocks_earned(4.99, 5.0), 0);
+        assert_eq!(blocks_earned(5.0, 5.0), 1);
+        assert_eq!(blocks_earned(14.99, 5.0), 2);
+        assert_eq!(blocks_earned(9.0, 3.0), 3);
+        assert_eq!(CATALOG.budget(0), 2);
+        assert_eq!(CATALOG.budget(1), 2);
+        assert_eq!(CATALOG.budget(3), 6);
+        assert_eq!(CATALOG.blocks_needed(0), 1);
+        assert_eq!(CATALOG.blocks_needed(2), 1);
+        assert_eq!(CATALOG.blocks_needed(3), 2);
+        assert_eq!(CATALOG.blocks_needed(4), 2);
+    }
 
     #[test]
     fn every_game_has_an_image_and_a_tier() {
