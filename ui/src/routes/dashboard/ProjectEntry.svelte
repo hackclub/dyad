@@ -76,8 +76,11 @@
         unreachable: "Couldn't reach Hackatime",
     };
 
-    let ship_blocker = $derived(
-        !can_ship
+    let ship_blocker = $derived.by(() => {
+        // TODO: re-enable shipping
+        const shipping_disabled: boolean = true;
+        if (shipping_disabled) return "Shipping is disabled as Dyad has ended";
+        return !can_ship
             ? "Verify your identity to ship"
             : missing_details
               ? "Fill in the name, description, code URL, playable URL, screenshot and games before shipping"
@@ -88,8 +91,8 @@
                     "Couldn't reach Hackatime"
                   : project.me.hours_logged < project.me.hours_target
                     ? `You've logged ${project.me.hours_logged}h of your ${project.me.hours_target}h target`
-                    : "",
-    );
+                    : "";
+    });
 
     const REVIEW_STATUS: Record<string, string> = {
         pending: "Shipped! It's in review.",
