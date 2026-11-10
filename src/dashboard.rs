@@ -1365,14 +1365,12 @@ async fn submit(s: Submission) -> Result<bool, ApiError> {
 const SHIP_WAIT: Duration = Duration::from_secs(30);
 
 #[actix_web::post("/dashboard/ship")]
-#[allow(unreachable_code, unused_variables)]
 pub async fn ship_project(
     req: HttpRequest,
     pool: web::Data<Pool<Postgres>>,
     table: web::Data<AirtableTable>,
     body: web::Json<ProjectRequest>,
 ) -> Result<HttpResponse, ApiError> {
-    return Err(ApiError::BadRequest("Shipping is disabled".into()));
     let hca_token = auth::login::get_auth_token_with_handling(&req).ok_or(ApiError::Unauthorized)?;
     auth::data::forget_auth_token(&hca_token);
     let (hacker, auth_data) = current_hacker(&req, &pool).await?;

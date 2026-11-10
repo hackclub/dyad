@@ -19,11 +19,18 @@
 
 <BackgroundLines />
 
-{#if login_failed}
-    <button class="login-error" onclick={() => (login_failed = false)}
-        >Couldn't finish signing you in. Try again in a bit.</button
-    >
-{/if}
+<div class="banners">
+    <p class="banner">
+        Dyad ended on November 1st. See <a href="https://hackclub.com/programs"
+            >hackclub.com/programs</a
+        > for more like it!
+    </p>
+    {#if login_failed}
+        <button class="banner" onclick={() => (login_failed = false)}
+            >Couldn't finish signing you in. Try again in a bit.</button
+        >
+    {/if}
+</div>
 
 <!-- Title -->
 <div class="title">
@@ -74,19 +81,37 @@
         overscroll-behavior: none;
     }
 
-    .login-error {
-        position: fixed;
+    .banners {
+        position: absolute;
         top: 16px;
         left: 50%;
         transform: translateX(-50%);
         z-index: 1000;
+        width: max-content;
+        max-width: 60vw;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .banner {
+        margin: 0;
+        text-align: center;
         padding: 8px 16px;
         border: 4px solid var(--border);
         border-radius: 16px;
         background-color: var(--bg-tertiary);
         color: var(--text-primary);
         font: inherit;
+    }
+
+    button.banner {
         cursor: pointer;
+    }
+
+    .banner a {
+        color: var(--accent-text);
     }
 
     .title {
